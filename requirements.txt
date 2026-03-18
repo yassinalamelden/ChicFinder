@@ -1,4 +1,4 @@
-# API & Web Framework
+# API & WEB Framework
 fastapi
 uvicorn[standard]
 pydantic
@@ -23,3 +23,9 @@ pandas
 
 # Demo UI
 streamlit
+
+# added by health check
+requests>=2.31.0
+torch>=2.1.1
+torchvision>=0.16.1
+starlette>=0.27.0

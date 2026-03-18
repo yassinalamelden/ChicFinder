@@ -1,0 +1,1 @@
+# ChicFinder core package
