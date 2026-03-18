@@ -1,0 +1,25 @@
+# API & Web Framework
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+
+# AI & LLM Integration
+openai
+langchain
+python-dotenv
+
+# Vector Database (Multimodal Search)
+marqo
+
+# Image Processing
+rembg
+Pillow
+opencv-python-headless
+
+# Data Handling
+numpy
+pandas
+
+# Demo UI
+streamlit
