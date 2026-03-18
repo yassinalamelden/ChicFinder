@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Machine Learning / Data
+data/
+models/
+*.pt
+*.pth
+*.h5
+*.onnx
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
