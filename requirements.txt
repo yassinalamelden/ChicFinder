@@ -1,31 +1,31 @@
-# API & WEB Framework
+# ============================================================
+# ChicFinder — requirements.txt
+# ============================================================
+# Install: pip install -r requirements.txt
+# ============================================================
+
+# --- API & Web Framework (Slice 1 — Gendy, Nour) -----------
 fastapi
 uvicorn[standard]
 pydantic
-python-multipart
+python-multipart          # required for FastAPI file uploads (UploadFile)
+python-dotenv             # loads .env for API keys and config paths
 
-# AI & LLM Integration
-openai
-langchain
-python-dotenv
+# --- AI & Embeddings (Slice 2 — Yassin, Amr, Moamen) -------
+torch                     # FashionCLIP backbone
+transformers              # CLIPModel + CLIPProcessor (HuggingFace API)
+faiss-cpu                 # FAISS vector index — IndexFlatIP cosine similarity
+numpy                     # vector ops, L2 normalization
 
-# Vector Database (Multimodal Search)
-marqo
+# --- Image Handling -----------------------------------------
+Pillow                    # PIL — image decode/resize across all modules
 
-# Image Processing
-rembg
-Pillow
-opencv-python-headless
+# --- Data & Scripts (Slice 2 scripts + Slice 3) -------------
+pandas                    # styles.csv parsing in scripts/ and Slice 3 metadata
 
-# Data Handling
-numpy
-pandas
+# --- Frontend (Slice 1 — Gendy, Nour) ----------------------
+streamlit                 # UI entry point: frontend/app.py
 
-# Demo UI
-streamlit
-
-# added by health check
-requests>=2.31.0
-torch>=2.1.1
-torchvision>=0.16.1
-starlette>=0.27.0
+# --- Health Check & HTTP ------------------------------------
+requests>=2.31.0          # HTTP calls (health check, script downloads)
+starlette>=0.27.0         # FastAPI depends on this; pinned for health check
