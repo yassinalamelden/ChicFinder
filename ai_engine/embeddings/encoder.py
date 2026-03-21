@@ -147,7 +147,8 @@ class FashionCLIPEncoder:
         inputs  = self._processor(images=image, return_tensors="pt")
         inputs  = {k: v.to(self._device) for k, v in inputs.items()}
         with torch.no_grad():
-            features = self._model.get_image_features(**inputs)
+            vision_outputs = self._model.vision_model(**inputs)
+            features = self._model.visual_projection(vision_outputs.pooler_output)
         return features.squeeze(0).cpu().numpy().astype(np.float32)
 
     @staticmethod
