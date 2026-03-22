@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChicFinder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --card: #1c1c1c;
+      --border: #2a2a2a;
+      --accent: #e8ff47;
+      --accent2: #ff6b35;
+      --text: #f0f0f0;
+      --muted: #777;
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    header {
+      padding: 48px 60px 32px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 60px;
+      width: 80px;
+      height: 3px;
+      background: var(--accent);
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 52px;
+      letter-spacing: 4px;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .logo span { color: var(--accent); }
+
+    .tagline {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding-bottom: 6px;
+    }
+
+    /* SEARCH SECTION */
+    .search-section {
+      padding: 40px 60px 0;
+    }
+
+    #searchInput {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 16px;
+      padding: 18px 24px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #searchInput::placeholder { color: var(--muted); }
+    #searchInput:focus { border-color: var(--accent); }
+
+    .or-divider {
+      padding: 20px 60px 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .or-divider::before, .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .card-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s;
+    }
+
+    .card:hover .card-img { transform: scale(1.04); }
+    .filter-section {
+      padding: 48px 60px 40px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .filter-group label {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      padding: 14px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      outline: none;
+      min-width: 180px;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23777' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, select:hover { border-color: var(--accent); }
+
+    .search-btn {
+      background: var(--accent);
+      color: #0d0d0d;
+      border: none;
+      font-family: var(--font-display);
+      font-size: 20px;
+      letter-spacing: 2px;
+      padding: 14px 40px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.2s;
+    }
+
+    .search-btn:hover { transform: translateY(-2px); background: #d4eb30; }
+    .search-btn:active { transform: translateY(0); }
+
+    /* RESULTS META */
+    .results-meta {
+      padding: 0 60px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .results-count {
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .results-count span { color: var(--accent); font-weight: 500; }
+
+    .divider {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* GRID */
+    .grid {
+      padding: 0 60px 80px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    /* CARD */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: #3a3a3a;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-image {
+      height: 200px;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-image-placeholder {
+      font-size: 64px;
+      opacity: 0.15;
+    }
+
+    .card-category-badge {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: var(--accent);
+      color: #0d0d0d;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 2px;
+    }
+
+    .card-body { padding: 20px; }
+
+    .card-brand {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .card-name {
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .card-price {
+      font-family: var(--font-display);
+      font-size: 26px;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+
+    .card-color {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .color-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+    }
+
+    .sizes-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .sizes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .size-tag {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 3px;
+      font-weight: 500;
+    }
+
+    /* OUTFIT SUGGESTIONS */
+    .outfit-section {
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      margin-top: 4px;
+    }
+
+    .outfit-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .outfit-suggestions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .outfit-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .outfit-item-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .outfit-item-brand {
+      color: var(--muted);
+      font-size: 11px;
+      margin-left: auto;
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+    .empty-state h3 { font-family: var(--font-display); font-size: 28px; letter-spacing: 2px; margin-bottom: 8px; color: var(--text); }
+    .empty-state p { font-size: 14px; }
+
+    /* INITIAL STATE */
+    .initial-state {
+      padding: 60px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .initial-state h2 {
+      font-family: var(--font-display);
+      font-size: 48px;
+      letter-spacing: 4px;
+      color: var(--border);
+      margin-bottom: 12px;
+    }
+
+    .initial-state p { font-size: 14px; letter-spacing: 1px; }
+
+    @media (max-width: 600px) {
+      header, .filter-section, .results-meta, .grid, .initial-state { padding-left: 20px; padding-right: 20px; }
+      .logo { font-size: 36px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CHIC<span>FINDER</span></div>
+  <div class="tagline">Egyptian & International Fashion</div>
+</header>
+
+<div class="search-section">
+  <input type="text" id="searchInput" placeholder="Search by name or brand... e.g. Mobaco, Hoodie, Nike" oninput="searchByText()" />
+</div>
+
+<div class="or-divider">or filter below</div>
+
+<div class="filter-section">
+  <div class="filter-group">
+    <label>Category</label>
+    <select id="categoryFilter">
+      <option value="">All Categories</option>
+      <option value="tops">Tops</option>
+      <option value="bottoms">Bottoms</option>
+      <option value="shoes">Shoes</option>
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label>Color</label>
+    <select id="colorFilter">
+      <option value="">All Colors</option>
+      <option value="black">Black</option>
+      <option value="white">White</option>
+      <option value="blue">Blue</option>
+      <option value="gray">Gray</option>
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label>Type</label>
+    <select id="typeFilter">
+      <option value="">All Types</option>
+      <option value="t-shirt">T-Shirt</option>
+      <option value="hoodie">Hoodie</option>
+      <option value="crewneck">Crewneck</option>
+      <option value="jacket">Jacket</option>
+      <option value="sweatpants">Sweatpants</option>
+      <option value="jeans">Jeans</option>
+      <option value="sneakers">Sneakers</option>
+    </select>
+  </div>
+
+  <button class="search-btn" onclick="search()">FIND IT</button>
+</div>
+
+<div id="app">
+  <div class="initial-state">
+    <h2>SELECT FILTERS</h2>
+    <p>Choose a category, color or type above to find your fit</p>
+  </div>
+</div>
+
+<script>
+  const products = [
+    { id: "001", name: "Blue Basic T-Shirt", category: "tops", type: "t-shirt", color: "blue", brand: "Mobaco", price_egp: 400, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400&q=80", goes_well_with: ["013", "016", "018"] },
+    { id: "002", name: "Black Basic T-Shirt", category: "tops", type: "t-shirt", color: "black", brand: "Mobaco", price_egp: 400, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=400&q=80", goes_well_with: ["012", "013", "018"] },
+    { id: "003", name: "White Basic T-Shirt", category: "tops", type: "t-shirt", color: "white", brand: "Mobaco", price_egp: 400, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80", goes_well_with: ["013", "016", "019"] },
+    { id: "004", name: "Black Hoodie", category: "tops", type: "hoodie", color: "black", brand: "Asili", price_egp: 800, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1556821840-3a63f15732ce?w=400&q=80", goes_well_with: ["012", "013", "018"] },
+    { id: "005", name: "White Hoodie", category: "tops", type: "hoodie", color: "white", brand: "Asili", price_egp: 800, sizes: ["S", "M", "L", "XL"], image: "https://asilieg.com/cdn/shop/products/WhatsAppImage2022-10-17at5.22.58PM_3_1024x.jpg?v=1666045477", goes_well_with: ["013", "016", "018"] },
+    { id: "006", name: "Black Hoodie", category: "tops", type: "hoodie", color: "black", brand: "Mawlah", price_egp: 850, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=400&q=80", goes_well_with: ["014", "015", "019"] },
+    { id: "007", name: "Gray Hoodie", category: "tops", type: "hoodie", color: "gray", brand: "Mawlah", price_egp: 850, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400&q=80", goes_well_with: ["013", "015", "018"] },
+    { id: "008", name: "Black Jacket", category: "tops", type: "jacket", color: "black", brand: "Murenzo", price_egp: 2000, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80", goes_well_with: ["016", "017", "019"] },
+    { id: "009", name: "Black Jacket", category: "tops", type: "jacket", color: "black", brand: "Pull and Bear", price_egp: 1800, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80", goes_well_with: ["016", "017", "018"] },
+    { id: "010", name: "Black Crewneck", category: "tops", type: "crewneck", color: "black", brand: "Bershka", price_egp: 650, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1578587018452-892bacefd3f2?w=400&q=80", goes_well_with: ["013", "016", "019"] },
+    { id: "011", name: "White Crewneck", category: "tops", type: "crewneck", color: "white", brand: "Bershka", price_egp: 650, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1572307480813-ceb0e59d8325?w=400&q=80", goes_well_with: ["012", "016", "018"] },
+    { id: "012", name: "Gray Sweatpants", category: "bottoms", type: "sweatpants", color: "gray", brand: "Mobaco", price_egp: 700, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=400&q=80", goes_well_with: ["002", "004", "018"] },
+    { id: "013", name: "Black Sweatpants", category: "bottoms", type: "sweatpants", color: "black", brand: "Mobaco", price_egp: 700, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1574180045827-681f8a1a9622?w=400&q=80", goes_well_with: ["003", "005", "018"] },
+    { id: "014", name: "Gray Sweatpants", category: "bottoms", type: "sweatpants", color: "gray", brand: "Denematic", price_egp: 750, sizes: ["S", "M", "L", "XL"], image: "https://images.unsplash.com/photo-1517438476312-10d79c077509?w=400&q=80", goes_well_with: ["006", "007", "019"] },
+    { id: "015", name: "Black Sweatpants", category: "bottoms", type: "sweatpants", color: "black", brand: "Denematic", price_egp: 750, sizes: ["S", "M", "L", "XL"], image: "https://tse1.mm.bing.net/th/id/OIP.gv3uhgY0YTaLdacoUIlF2wHaKy?rs=1&pid=ImgDetMain&o=7&rm=3", goes_well_with: ["006", "007", "019"] },
+    { id: "016", name: "Blue Jeans", category: "bottoms", type: "jeans", color: "blue", brand: "Concrete", price_egp: 2000, sizes: ["28", "30", "32", "34", "36"], image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&q=80", goes_well_with: ["001", "008", "018"] },
+    { id: "017", name: "Blue Jeans", category: "bottoms", type: "jeans", color: "blue", brand: "Pull and Bear", price_egp: 1600, sizes: ["28", "30", "32", "34", "36"], image: "https://images.unsplash.com/photo-1555689502-c4b22d76c56f?w=400&q=80", goes_well_with: ["003", "009", "018"] },
+    { id: "018", name: "Nike Air Force 1", category: "shoes", type: "sneakers", color: "white", brand: "Nike", price_egp: 3500, sizes: ["38", "39", "40", "41", "42", "43", "44"], image: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400&q=80", goes_well_with: ["001", "013", "016"] },
+    { id: "019", name: "Adidas Ultraboost", category: "shoes", type: "sneakers", color: "black", brand: "Adidas", price_egp: 4200, sizes: ["38", "39", "40", "41", "42", "43", "44"], image: "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400&q=80", goes_well_with: ["004", "015", "017"] }
+  ];
+
+  const colorMap = {
+    black: "#1a1a1a", white: "#f5f5f5", blue: "#3b6fd4",
+    gray: "#888888", grey: "#888888"
+  };
+
+  const emojiMap = {
+    "t-shirt": "👕", hoodie: "🧥", crewneck: "👕", jacket: "🧥",
+    sweatpants: "👖", jeans: "👖", sneakers: "👟"
+  };
+
+  function getProductById(id) {
+    return products.find(p => p.id === id);
+  }
+
+  function searchByText() {
+    const query = document.getElementById("searchInput").value.toLowerCase().trim();
+    if (!query) {
+      document.getElementById("app").innerHTML = `
+        <div class="initial-state">
+          <h2>SELECT FILTERS</h2>
+          <p>Choose a category, color or type above to find your fit</p>
+        </div>`;
+      return;
+    }
+    const results = products.filter(p =>
+      p.name.toLowerCase().includes(query) ||
+      p.brand.toLowerCase().includes(query)
+    );
+    renderResults(results);
+  }
+
+  function search() {
+    const category = document.getElementById("categoryFilter").value;
+    const color = document.getElementById("colorFilter").value;
+    const type = document.getElementById("typeFilter").value;
+
+    let results = products.filter(p => {
+      return (!category || p.category === category) &&
+             (!color || p.color === color) &&
+             (!type || p.type === type);
+    });
+
+    renderResults(results);
+  }
+
+  function renderResults(results) {
+    const app = document.getElementById("app");
+
+    if (results.length === 0) {
+      app.innerHTML = `
+        <div class="grid">
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <h3>NO RESULTS FOUND</h3>
+            <p>Try changing your filters to find something else</p>
+          </div>
+        </div>`;
+      return;
+    }
+
+    app.innerHTML = `
+      <div class="results-meta">
+        <div class="results-count"><span>${results.length}</span> items found</div>
+        <div class="divider"></div>
+      </div>
+      <div class="grid">
+        ${results.map((p, i) => renderCard(p, i)).join("")}
+      </div>`;
+  }
+
+  function renderCard(p, index) {
+    const suggestions = (p.goes_well_with || [])
+      .map(id => getProductById(id))
+      .filter(Boolean);
+
+    const outfitHTML = suggestions.length > 0 ? `
+      <div class="outfit-section">
+        <div class="outfit-label">Goes well with</div>
+        <div class="outfit-suggestions">
+          ${suggestions.map(s => `
+            <div class="outfit-item">
+              <div class="outfit-item-dot"></div>
+              <span>${s.name}</span>
+              <span class="outfit-item-brand">${s.brand}</span>
+            </div>`).join("")}
+        </div>
+      </div>` : "";
+
+    return `
+      <div class="card" style="animation-delay: ${index * 0.06}s">
+        <div class="card-image">
+          ${p.image
+            ? `<img class="card-img" src="${p.image}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="card-image-placeholder" style="display:none">${emojiMap[p.type] || "👕"}</div>`
+            : `<div class="card-image-placeholder">${emojiMap[p.type] || "👕"}</div>`
+          }
+          <div class="card-category-badge">${p.type}</div>
+        </div>
+        <div class="card-body">
+          <div class="card-brand">${p.brand}</div>
+          <div class="card-name">${p.name}</div>
+          <div class="card-row">
+            <div class="card-price">${p.price_egp.toLocaleString()} EGP</div>
+            <div class="card-color">
+              <div class="color-dot" style="background:${colorMap[p.color] || '#555'}"></div>
+              ${p.color}
+            </div>
+          </div>
+          <div class="sizes-label">Available Sizes</div>
+          <div class="sizes">
+            ${p.sizes.map(s => `<div class="size-tag">${s}</div>`).join("")}
+          </div>
+          ${outfitHTML}
+        </div>
+      </div>`;
+  }
+</script>
+</body>
+</html>
