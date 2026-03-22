@@ -22,6 +22,7 @@ from api.middleware.logging import LoggingMiddleware
 from chic_finder.config import settings
 
 import logging
+import json
 logger = logging.getLogger(__name__)
 
 
@@ -49,6 +50,26 @@ async def lifespan(app: FastAPI):
         )
     except Exception as exc:
         logger.error("Unexpected error pre-warming FAISSVectorStore: %s", exc)
+
+    # Load products.json
+    app.state.products = []
+    app.state.products_lookup = {}
+    products_path = Path("products.json")
+    if products_path.exists():
+        try:
+            with open(products_path) as f:
+                products = json.load(f)
+                app.state.products = products
+                # Build lookup by ID (padded to match FAISS index logic if needed)
+                # Strategy B: key by id or filename. products.json has id: "001"
+                app.state.products_lookup = {
+                    p.get("id"): p for p in products if p.get("id")
+                }
+                logger.info("Loaded %d products from products.json", len(products))
+        except Exception as exc:
+            logger.error("Failed to load products.json: %s", exc)
+    else:
+        logger.warning("products.json not found at project root")
 
     yield  # application runs here
 
@@ -80,9 +101,9 @@ app.include_router(health.router,    prefix=settings.API_V1_STR, tags=["health"]
 # ---------------------------------------------------------------------------
 
 _UPLOADS_DIR = Path("uploads")
-_DATASET_DIR = Path("data/images")
+_DATA_DIR    = Path("data/raw_images")
 _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-_DATASET_DIR.mkdir(parents=True, exist_ok=True)
+_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +114,7 @@ _DATASET_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(_UPLOADS_DIR)), name="uploads")
 
 # Dataset images — served read-only so frontend can display results by URL
-app.mount("/dataset", StaticFiles(directory=str(_DATASET_DIR)), name="dataset")
+app.mount("/images", StaticFiles(directory=str(_DATA_DIR)), name="images")
 
 
 # ---------------------------------------------------------------------------

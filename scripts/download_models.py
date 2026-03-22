@@ -1,4 +1,8 @@
 import os
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import requests
 from chic_finder.config import settings
 

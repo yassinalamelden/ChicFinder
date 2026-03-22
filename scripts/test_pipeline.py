@@ -1,4 +1,9 @@
 from PIL import Image
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from ai_engine.embeddings.encoder import get_encoder
 from ai_engine.rag.pipeline import RAGPipeline
 
 def main():

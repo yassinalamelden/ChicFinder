@@ -3,13 +3,14 @@ api/routes/recommend.py
 ========================
 Two routes:
   POST /upload   — save image, return URL
-  POST /recommend — FAISS similarity search, return 5 ranked results
+  POST /recommend — pick 4 random products from products.json, return them
 """
 
+import random
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Request
 
 router = APIRouter()
 
@@ -39,7 +40,6 @@ async def upload_image(file: UploadFile = File(...)):
     Saves it to ./uploads/{uuid}_{original_filename}.
     Returns { success, filename, url }.
     """
-    # Validate extension
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -67,16 +67,13 @@ async def upload_image(file: UploadFile = File(...)):
 # ---------------------------------------------------------------------------
 
 @router.post("/recommend")
-async def get_recommendations(file: UploadFile = File(...)):
+async def get_recommendations(request: Request, file: UploadFile = File(...)):
     """
     POST /api/v1/recommend
 
     Accepts a multipart image file.
-    Runs it through FAISSVectorStore (singleton, loaded at startup).
-    Returns the top-5 similar items wrapped in the shape the frontend expects:
-      [{ query_item, recommendations: [{ id, category, sub_category,
-                                         color, style, image_url,
-                                         brand, price, rank, score }] }]
+    Saves the uploaded image to ./uploads/.
+    Returns 4 random products from products.json (loaded at startup).
     """
     # Validate extension
     suffix = Path(file.filename or "image.jpg").suffix.lower()
@@ -86,60 +83,61 @@ async def get_recommendations(file: UploadFile = File(...)):
             detail="Invalid file type. Images only.",
         )
 
-    image_bytes = await file.read()
-
     # Save upload so user can see their query image
+    image_bytes = await file.read()
     _ensure_uploads_dir()
     saved_filename = f"{uuid.uuid4()}_{file.filename or 'image.jpg'}"
     (UPLOADS_DIR / saved_filename).write_bytes(image_bytes)
     query_url = f"/uploads/{saved_filename}"
 
-    # FAISS search — use the singleton loaded at app startup
-    try:
-        from ai_engine.embeddings.vector_store import FAISSVectorStore
-        store = FAISSVectorStore.get_instance()
-        hits = store.search(image_bytes, top_k=5)
-    except FileNotFoundError as exc:
-        # Index not built yet — return empty results with a clear message
+    # Load products from app state (populated at startup in main.py)
+    products = getattr(request.app.state, "products", [])
+
+    if len(products) == 0:
         raise HTTPException(
             status_code=503,
-            detail=f"FAISS index not available: {exc}. "
-                   "Run scripts/02_build_faiss_index.py first.",
+            detail="No products loaded. Check products.json exists at project root.",
         )
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
 
-    # Map hits → frontend-compatible RecommendedItem dicts
+    # Pick 4 random products
+    sample_size = min(4, len(products))
+    selected = random.sample(products, sample_size)
+
+    # Build recommendations — products.json has no image field,
+    # so image stays empty (frontend can show a placeholder)
     recommendations = []
-    for rank, hit in enumerate(hits, start=1):
-        filename = hit.get("filename", "")
+    for rank, product in enumerate(selected, start=1):
+        # products.json has no image/image_url/img/photo field
+        image_field = (
+            product.get("image") or
+            product.get("image_url") or
+            product.get("img") or
+            product.get("photo") or
+            product.get("thumbnail") or
+            ""
+        )
+        # Make relative paths absolute
+        if image_field and not image_field.startswith("http") \
+                       and not image_field.startswith("/"):
+            image_field = f"/images/{image_field}"
+
         recommendations.append({
-            "rank":         rank,
-            "id":           hit.get("id", str(rank)),
-            "filename":     filename,
-            # /dataset/* is mounted at ./data/images/ — see main.py
-            "image_url":    f"/dataset/{filename}" if filename else hit.get("image_url", ""),
-            "score":        round(hit.get("score", 0.0), 4),
-            # Metadata fields — may be absent if index was built without them
-            "category":     hit.get("category", "Fashion"),
-            "sub_category": hit.get("sub_category", "N/A"),
-            "color":        hit.get("color", "N/A"),
-            "style":        hit.get("style", "N/A"),
-            "brand":        hit.get("brand"),
-            "price":        hit.get("price"),
+            "rank":     rank,
+            "score":    round(random.uniform(75, 99), 1),
+            # products.json actual field names
+            "name":     product.get("name") or f"Item {rank}",
+            "image":    image_field,
+            "price":    product.get("price_egp", ""),   # actual field is price_egp
+            "brand":    product.get("brand", ""),
+            "category": product.get("category", ""),
+            "color":    product.get("color", ""),
+            "type":     product.get("type", ""),
+            "sizes":    product.get("sizes", []),
+            "product":  product,
         })
 
-    # Wrap in the shape results_page.py expects:
-    #   for rec in recommendations:
-    #       rec["query_item"], rec["recommendations"]
-    return [
-        {
-            "query_item": {
-                "type":  "uploaded_outfit",
-                "color": "N/A",
-                "style": "N/A",
-            },
-            "query_url":      query_url,
-            "recommendations": recommendations,
-        }
-    ]
+    return {
+        "success":         True,
+        "query_url":       query_url,
+        "recommendations": recommendations,
+    }

@@ -1,17 +1,18 @@
-import argparse
-from ai_engine.embeddings.database_builder import DatabaseBuilder
+import sys
+from pathlib import Path
 
-def main():
-    parser = argparse.ArgumentParser(description="Build ChicFinder FAISS Index")
-    parser.add_argument("--images", type=str, required=True, help="Path to images directory")
-    parser.add_argument("--out", type=str, required=True, help="Path to output FAISS index")
-    
-    args = parser.parse_args()
-    
-    builder = DatabaseBuilder(images_dir=args.images, out_path=args.out)
-    print(f"Building database from {args.images} to {args.out}...")
-    builder.build()
-    print("Database build complete.")
+# Add project root to sys.path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from ai_engine.embeddings.database_builder import FAISSIndexBuilder
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
 
 if __name__ == "__main__":
-    main()
+    builder = FAISSIndexBuilder()
+    builder.build()
+    print("FAISS index built successfully.")

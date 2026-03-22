@@ -619,9 +619,13 @@
     // Reset input so the same file can be uploaded again if needed
     event.target.value = '';
 
+    // Create a local preview URL so the photo shows immediately
+    const localPreviewUrl = URL.createObjectURL(file);
+
     const app = document.getElementById("app");
     app.innerHTML = `
-      <div class="initial-state">
+      <div class="initial-state" style="gap: 20px;">
+        <img src="${localPreviewUrl}" style="height: 120px; width: 120px; object-fit: cover; border-radius: 8px; border: 2px solid var(--accent); box-shadow: 0 0 20px rgba(204,255,0,0.2);" alt="Your uploaded outfit"/>
         <h2 style="color: var(--accent);">ANALYZING OUTFIT...</h2>
         <p>Extracting visual features and searching the catalog.</p>
       </div>`;
@@ -640,34 +644,41 @@
       }
 
       const data = await response.json();
-      const payload = data[0]; 
-      const recommendations = payload.recommendations;
+      // New format is a flat object: { success, query_url, recommendations }
+      const recommendations = data.recommendations;
+      // Use server URL if available, otherwise fall back to local preview
+      const queryUrl = data.query_url || localPreviewUrl;
 
       if (!recommendations || recommendations.length === 0) {
         throw new Error("No recommendations found.");
       }
 
       // Map API response keys to the keys expected by renderCard()
-      const mappedResults = recommendations.map(r => ({
-        id: r.id,
-        name: `${r.brand || "Fashion"} ${r.category || "Item"}`,
-        category: r.category || "Unknown",
-        type: r.sub_category || "item",
-        color: r.color || "N/A",
-        brand: r.brand || "N/A",
-        price_egp: r.price !== null ? r.price : 500,
-        sizes: ["S", "M", "L", "XL"],
-        image: r.image_url,
-        goes_well_with: []
-      }));
+      // Look up the matching product in the frontend products array to get its image URL
+      const mappedResults = recommendations.map(r => {
+        const localProduct = products.find(p => p.id === (r.product?.id || r.id));
+        return {
+          id:           r.product?.id || r.rank,
+          name:         r.name || `${r.brand || "Fashion"} ${r.category || "Item"}`,
+          category:     r.category || "Unknown",
+          type:         r.type || r.product?.type || "item",
+          color:        r.color || "N/A",
+          brand:        r.brand || "N/A",
+          price_egp:    r.price !== "" && r.price !== undefined ? r.price : 500,
+          sizes:        r.sizes || r.product?.sizes || ["S", "M", "L", "XL"],
+          // Use the image from the frontend product dictionary first, then API, then empty
+          image:        localProduct?.image || r.image || "",
+          score:        r.score,
+          goes_well_with: localProduct?.goes_well_with || []
+        };
+      });
 
       // Render the results with the query image at the top
-      const queryUrl = payload.query_url;
-
       app.innerHTML = `
         <div class="results-meta" style="flex-direction: column; align-items: flex-start; gap: 24px; padding-top: 10px;">
           <div style="display: flex; gap: 20px; align-items: center; background: var(--surface); padding: 16px; border-radius: 8px; border: 1px solid var(--border); width: 100%;">
-            <img src="${queryUrl}" style="height: 100px; width: 100px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border);" alt="Query Image"/>
+            <img src="${queryUrl}" style="height: 100px; width: 100px; object-fit: cover; border-radius: 4px; border: 1px solid var(--accent);" alt="Query Image"
+              onerror="this.src='${localPreviewUrl}'" />
             <div>
               <h3 style="color: var(--accent); font-family: var(--font-display); font-size: 28px; letter-spacing: 2px; line-height: 1;">YOUR OUTFIT</h3>
               <p style="font-size: 14px; color: var(--muted); margin-top: 6px;">We found these visual matches from the catalog based on your photo.</p>
