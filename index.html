@@ -415,8 +415,14 @@
   <div class="tagline">Egyptian & International Fashion</div>
 </header>
 
-<div class="search-section">
-  <input type="text" id="searchInput" placeholder="Search by name or brand... e.g. Mobaco, Hoodie, Nike" oninput="searchByText()" />
+<div class="search-section" style="display: flex; gap: 16px;">
+  <input type="text" id="searchInput" style="flex: 1;" placeholder="Search by name or brand... e.g. Mobaco, Hoodie, Nike" oninput="searchByText()" />
+  
+  <button class="search-btn" style="white-space: nowrap; display: flex; align-items: center; gap: 10px;" onclick="document.getElementById('imageUpload').click()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+    IMAGE SEARCH
+  </button>
+  <input type="file" id="imageUpload" style="display: none;" accept="image/*" onchange="handleImageUpload(event)" />
 </div>
 
 <div class="or-divider">or filter below</div>
@@ -605,6 +611,87 @@
         </div>
       </div>`;
   }
+
+  async function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Reset input so the same file can be uploaded again if needed
+    event.target.value = '';
+
+    const app = document.getElementById("app");
+    app.innerHTML = `
+      <div class="initial-state">
+        <h2 style="color: var(--accent);">ANALYZING OUTFIT...</h2>
+        <p>Extracting visual features and searching the catalog.</p>
+      </div>`;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/v1/recommend", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error("API returned status " + response.status);
+      }
+
+      const data = await response.json();
+      const payload = data[0]; 
+      const recommendations = payload.recommendations;
+
+      if (!recommendations || recommendations.length === 0) {
+        throw new Error("No recommendations found.");
+      }
+
+      // Map API response keys to the keys expected by renderCard()
+      const mappedResults = recommendations.map(r => ({
+        id: r.id,
+        name: `${r.brand || "Fashion"} ${r.category || "Item"}`,
+        category: r.category || "Unknown",
+        type: r.sub_category || "item",
+        color: r.color || "N/A",
+        brand: r.brand || "N/A",
+        price_egp: r.price !== null ? r.price : 500,
+        sizes: ["S", "M", "L", "XL"],
+        image: r.image_url,
+        goes_well_with: []
+      }));
+
+      // Render the results with the query image at the top
+      const queryUrl = payload.query_url;
+
+      app.innerHTML = `
+        <div class="results-meta" style="flex-direction: column; align-items: flex-start; gap: 24px; padding-top: 10px;">
+          <div style="display: flex; gap: 20px; align-items: center; background: var(--surface); padding: 16px; border-radius: 8px; border: 1px solid var(--border); width: 100%;">
+            <img src="${queryUrl}" style="height: 100px; width: 100px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border);" alt="Query Image"/>
+            <div>
+              <h3 style="color: var(--accent); font-family: var(--font-display); font-size: 28px; letter-spacing: 2px; line-height: 1;">YOUR OUTFIT</h3>
+              <p style="font-size: 14px; color: var(--muted); margin-top: 6px;">We found these visual matches from the catalog based on your photo.</p>
+            </div>
+          </div>
+          <div style="display: flex; width: 100%; align-items: center; gap: 16px;">
+            <div class="results-count"><span>${mappedResults.length}</span> items found</div>
+            <div class="divider"></div>
+          </div>
+        </div>
+        <div class="grid">
+          ${mappedResults.map((p, i) => renderCard(p, i)).join("")}
+        </div>`;
+
+    } catch(err) {
+      app.innerHTML = `
+        <div class="initial-state">
+          <h2 style="color: var(--accent2);">ERROR</h2>
+          <p>Could not process image: ${err.message}. Make sure API is running on port 8000.</p>
+        </div>`;
+      console.error(err);
+    }
+  }
+
 </script>
 </body>
 </html>
