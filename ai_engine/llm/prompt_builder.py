@@ -54,5 +54,5 @@ Rank the candidates by visual similarity to the query item.
 def build_rerank_user_message(n_candidates: int) -> str:
     return RERANK_USER_TEMPLATE.format(
         n=n_candidates,
-        n_minus_1=n_candidates - 1
+        n_minus_1=n_candidates - 1,
     )
