@@ -144,6 +144,57 @@ class FAISSVectorStore:
 
         return results
 
+    def search_by_vector(
+        self,
+        query_vector: np.ndarray,
+        top_k: int = DEFAULT_TOP_K,
+    ) -> list[dict]:
+        """
+        Find the most visually similar fashion items given a pre-computed embedding.
+
+        Parameters
+        ----------
+        query_vector : np.ndarray
+            L2-normalized embedding of shape (D,), dtype=float32.
+        top_k : int
+            Number of results to return (default 5).
+
+        Returns
+        -------
+        list[dict]
+            Each dict has: _id, id, image_url, filename, score, and any stored
+            metadata keys (category, color, style, brand, price, etc.).
+            Sorted by score descending (most similar first).
+        """
+        query_matrix = np.expand_dims(query_vector.astype(np.float32), axis=0)
+        scores, indices = self._index.search(query_matrix, top_k)
+
+        results = []
+        for score, idx in zip(scores[0], indices[0]):
+            if idx == -1:
+                continue
+            meta = self._metadata.get(str(idx), {})
+            results.append({
+                "_id":       meta.get("id", str(idx)),
+                "id":        meta.get("id", str(idx)),
+                "image_url": meta.get("image_url", ""),
+                "filename":  meta.get("filename", ""),
+                "category":  meta.get("category", "N/A"),
+                "sub_category": meta.get("sub_category", "N/A"),
+                "color":     meta.get("color", "N/A"),
+                "style":     meta.get("style", "N/A"),
+                "brand":     meta.get("brand"),
+                "price":     meta.get("price"),
+                "score":     float(score),
+            })
+
+        return results
+
+    @property
+    def size(self) -> int:
+        """Number of vectors currently stored in the index."""
+        return self._index.ntotal
+
 
 # ---------------------------------------------------------------------------
 # Agreed contract function — drop-in for Slice 1 dummy
