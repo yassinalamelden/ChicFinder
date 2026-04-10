@@ -6,10 +6,9 @@ ChicFinder utilizes a sophisticated multimodal Retrieval-Augmented Generation (R
 
 The recommendation pipeline converts a source image containing an outfit into a list of purchasable clothing items via the following steps:
 
-1.  **Background Removal (`FashionSegmenter`)**: Isolates the person/outfit from the background using `rembg` (ViT-based segmentation).
-2.  **LLM Outfit Parsing (`OutfitParser`)**: Uses **GPT-4o Vision** to analyze the cleaned image and decompose it into distinct items (e.g., top, bottom, shoes), extracting rich metadata (type, color, style, gender, material, fit).
-3.  **Query Encoding (`FashionEncoder`)**: Converts the image into a dense 256-dimensional semantic embedding utilizing a fine-tuned **VGG-16** model with a custom bottleneck layer and L2 normalization.
-4.  **Vector Retrieval (`VectorStore` & `Retriever`)**: Executes a fast Approximate Nearest Neighbor (ANN) search over a **FAISS** index (`IndexFlatIP`) using the 256-d embedding. The index intrinsically calculates cosine similarity since vectors are L2 normalized.
+1.  **LLM Outfit Parsing (`OutfitParser`)**: Uses **GPT-4o Vision** to analyze the input image and decompose it into distinct items (e.g., top, bottom, shoes), extracting rich metadata (type, color, style, gender, material, fit).
+2.  **Query Encoding (`FashionCLIPEncoder`)**: Converts the image into a dense 512-dimensional semantic embedding using the **FashionCLIP** model (`patrickjohncyh/fashion-clip` via HuggingFace Transformers), with L2 normalization applied for cosine similarity compatibility.
+4.  **Vector Retrieval (`FAISSVectorStore` & `Retriever`)**: Executes a fast Approximate Nearest Neighbor (ANN) search over a **FAISS** index (`IndexFlatIP`) using the 512-d embedding. The index intrinsically calculates cosine similarity since vectors are L2 normalized.
 5.  **Vision Reranking (`VisionReranker`)**: Passes the query outfit image and the top-$K$ candidate product images back to **GPT-4o Vision** for a fine-grained, visual-similarity-based reranking.
 
 ---
@@ -31,12 +30,12 @@ The `ai_engine/llm` module handles interactions with OpenAI's GPT-4o.
 
 The `ai_engine/embeddings` module handles offline indexing and online semantic encoding.
 
-*   **`FashionEncoder` (`embeddings/encoder.py`)** 
-    Wraps a VGG-16 backbone. Pre-processes the image with standard ImageNet transforms, passes it through the CNN, and extracts the 256-d L2-normalized embedding. Gracefully degrades to ImageNet weights if the fine-tuned `.pth` file is absent.
-*   **`VectorStore` (`embeddings/vector_store.py`)**
-    A fully offline FAISS index (`faiss-cpu`). Drops the heavy Marqo dependency in favor of a self-contained local vector database. Persists the index (`.faiss`) and parallel metadata (`.meta` JSON) to disk.
-*   **`DatabaseBuilder` (`embeddings/database_builder.py`)**
-    Offline indexing utility. Scans a directory of fashion photos (or a JSON manifest), batches them through `FashionEncoder`, and stores them into the `VectorStore`. 
+*   **`FashionCLIPEncoder` (`embeddings/encoder.py`)** 
+    Wraps the `patrickjohncyh/fashion-clip` model (CLIP ViT-B/32, fine-tuned on ~700k Farfetch fashion images). Decodes raw image bytes to a PIL RGB image, runs it through the CLIP vision encoder, and returns a 512-dimensional L2-normalized embedding. Pre-trained on fashion-specific data, making it robust to backgrounds without requiring explicit background removal.
+*   **`FAISSVectorStore` (`embeddings/vector_store.py`)**
+    A fully offline FAISS index (`faiss-cpu`, `IndexFlatIP`). Drops the heavy Marqo dependency in favor of a self-contained local vector database. Stores the index binary and parallel metadata JSON to disk. Exposes both `search(image_bytes)` (encode + search) and `search_by_vector(query_vector)` (pre-computed embedding search) methods.
+*   **`FAISSIndexBuilder` (`embeddings/database_builder.py`)**
+    Offline indexing utility. Scans a directory of fashion photos, encodes them via `FashionCLIPEncoder`, and saves the resulting 512-d vectors into the `FAISSVectorStore`. 
 
 ### 3. Orchestration
 
@@ -52,10 +51,7 @@ Before the retrieval pipeline can work, you must populate the FAISS database wit
 
 ```bash
 # Build from a local directory of images
-python -m scripts.build_database --images ./data/images --out ./data/faiss_index
-
-# OR build from a JSON manifest file
-python -m scripts.build_database --manifest ./data/manifest.json
+python -m scripts.build_database --images ./data/raw_images --out ./data/embeddings.index
 ```
 
 ### Smoke Testing the Pipeline
