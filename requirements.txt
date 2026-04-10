@@ -11,14 +11,20 @@ pydantic
 python-multipart          # required for FastAPI file uploads (UploadFile)
 python-dotenv             # loads .env for API keys and config paths
 
+# --- AI & LLM Integration (Slice 2 — Moamen) ---------------
+openai>=1.0.0             # GPT-4o Vision: outfit parsing and reranking
+
 # --- AI & Embeddings (Slice 2 — Yassin, Amr, Moamen) -------
-torch                     # FashionCLIP backbone
+torch>=2.1.1              # FashionCLIP backbone
+torchvision>=0.16.1       # image transforms (used by VGG-16 based models)
 transformers              # CLIPModel + CLIPProcessor (HuggingFace API)
 faiss-cpu                 # FAISS vector index — IndexFlatIP cosine similarity
 numpy                     # vector ops, L2 normalization
 
 # --- Image Handling -----------------------------------------
 Pillow                    # PIL — image decode/resize across all modules
+rembg                     # background removal (used in preprocessing pipeline)
+opencv-python-headless    # image processing utilities (headless for server environments)
 
 # --- Data & Scripts (Slice 2 scripts + Slice 3) -------------
 pandas                    # styles.csv parsing in scripts/ and Slice 3 metadata
@@ -27,5 +33,5 @@ pandas                    # styles.csv parsing in scripts/ and Slice 3 metadata
 streamlit                 # UI entry point: frontend/app.py
 
 # --- Health Check & HTTP ------------------------------------
-requests>=2.31.0          # HTTP calls (health check, script downloads)
+requests>=2.31.0          # HTTP calls (health check, script downloads, image fetching)
 starlette>=0.27.0         # FastAPI depends on this; pinned for health check
