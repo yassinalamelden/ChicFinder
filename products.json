@@ -1,0 +1,192 @@
+[
+  {
+    "id": "001",
+    "name": "Blue Basic T-Shirt",
+    "category": "tops",
+    "type": "t-shirt",
+    "color": "blue",
+    "brand": "Mobaco",
+    "price_egp": 400,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "002",
+    "name": "Black Basic T-Shirt",
+    "category": "tops",
+    "type": "t-shirt",
+    "color": "black",
+    "brand": "Mobaco",
+    "price_egp": 400,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "003",
+    "name": "White Basic T-Shirt",
+    "category": "tops",
+    "type": "t-shirt",
+    "color": "white",
+    "brand": "Mobaco",
+    "price_egp": 400,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "004",
+    "name": "Black Hoodie",
+    "category": "tops",
+    "type": "hoodie",
+    "color": "black",
+    "brand": "Asili",
+    "price_egp": 800,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "005",
+    "name": "White Hoodie",
+    "category": "tops",
+    "type": "hoodie",
+    "color": "white",
+    "brand": "Asili",
+    "price_egp": 800,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "006",
+    "name": "Black Hoodie",
+    "category": "tops",
+    "type": "hoodie",
+    "color": "black",
+    "brand": "Mawlah",
+    "price_egp": 850,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "007",
+    "name": "Gray Hoodie",
+    "category": "tops",
+    "type": "hoodie",
+    "color": "gray",
+    "brand": "Mawlah",
+    "price_egp": 850,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "008",
+    "name": "Black Jacket",
+    "category": "tops",
+    "type": "jacket",
+    "color": "black",
+    "brand": "Murenzo",
+    "price_egp": 2000,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "009",
+    "name": "Black Jacket",
+    "category": "tops",
+    "type": "jacket",
+    "color": "black",
+    "brand": "Pull and Bear",
+    "price_egp": 1800,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "010",
+    "name": "Black Crewneck",
+    "category": "tops",
+    "type": "crewneck",
+    "color": "black",
+    "brand": "Bershka",
+    "price_egp": 650,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "011",
+    "name": "White Crewneck",
+    "category": "tops",
+    "type": "crewneck",
+    "color": "white",
+    "brand": "Bershka",
+    "price_egp": 650,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "012",
+    "name": "Gray Sweatpants",
+    "category": "bottoms",
+    "type": "sweatpants",
+    "color": "gray",
+    "brand": "Mobaco",
+    "price_egp": 700,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "013",
+    "name": "Black Sweatpants",
+    "category": "bottoms",
+    "type": "sweatpants",
+    "color": "black",
+    "brand": "Mobaco",
+    "price_egp": 700,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "014",
+    "name": "Gray Sweatpants",
+    "category": "bottoms",
+    "type": "sweatpants",
+    "color": "gray",
+    "brand": "Denematic",
+    "price_egp": 750,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "015",
+    "name": "Black Sweatpants",
+    "category": "bottoms",
+    "type": "sweatpants",
+    "color": "black",
+    "brand": "Denematic",
+    "price_egp": 750,
+    "sizes": ["S", "M", "L", "XL"]
+  },
+  {
+    "id": "016",
+    "name": "Blue Jeans",
+    "category": "bottoms",
+    "type": "jeans",
+    "color": "blue",
+    "brand": "Concrete",
+    "price_egp": 2000,
+    "sizes": ["28", "30", "32", "34", "36"]
+  },
+  {
+    "id": "017",
+    "name": "Blue Jeans",
+    "category": "bottoms",
+    "type": "jeans",
+    "color": "blue",
+    "brand": "Pull and Bear",
+    "price_egp": 1600,
+    "sizes": ["28", "30", "32", "34", "36"]
+  },
+  {
+    "id": "018",
+    "name": "Nike Air Force 1",
+    "category": "shoes",
+    "type": "sneakers",
+    "color": "white",
+    "brand": "Nike",
+    "price_egp": 3500,
+    "sizes": ["38", "39", "40", "41", "42", "43", "44"]
+  },
+  {
+    "id": "019",
+    "name": "Adidas Ultraboost",
+    "category": "shoes",
+    "type": "sneakers",
+    "color": "black",
+    "brand": "Adidas",
+    "price_egp": 4200,
+    "sizes": ["38", "39", "40", "41", "42", "43", "44"]
+  }
+]
