@@ -19,6 +19,7 @@ models/
 *.pth
 *.h5
 *.onnx
+uploads/
 
 # OS / IDE
 .DS_Store

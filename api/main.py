@@ -14,6 +14,10 @@ from contextlib import asynccontextmanager
 import json
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from the .env file
+load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
