@@ -65,27 +65,28 @@ class FAISSVectorStore:
         index_path    = Path(index_path)
         metadata_path = Path(metadata_path)
 
-        # Validate files exist before loading
-        if not index_path.exists():
-            raise FileNotFoundError(
-                f"FAISS index not found at {index_path}. "
-                "Run scripts/02_build_faiss_index.py first."
+        self._index = None
+        self._metadata = None
+
+        # Handle missing files gracefully
+        if not index_path.exists() or not metadata_path.exists():
+            logger.warning(
+                "FAISS index or metadata not found. VectorStore initialized empty."
             )
-        if not metadata_path.exists():
-            raise FileNotFoundError(
-                f"Metadata not found at {metadata_path}. "
-                "Run scripts/02_build_faiss_index.py first."
+            return
+
+        try:
+            logger.info("Loading FAISS index from %s ...", index_path)
+            self._index = faiss.read_index(str(index_path))
+
+            with open(metadata_path) as f:
+                self._metadata: dict = json.load(f)
+
+            logger.info(
+                "FAISSVectorStore ready | vectors=%d", self._index.ntotal
             )
-
-        logger.info("Loading FAISS index from %s ...", index_path)
-        self._index = faiss.read_index(str(index_path))
-
-        with open(metadata_path) as f:
-            self._metadata: dict = json.load(f)
-
-        logger.info(
-            "FAISSVectorStore ready | vectors=%d", self._index.ntotal
-        )
+        except Exception as exc:
+            logger.error("Failed to load index or metadata: %s", exc)
 
     # ------------------------------------------------------------------
     # Singleton
@@ -119,27 +120,47 @@ class FAISSVectorStore:
         Returns
         -------
         list[dict]
-            Each dict has: id, image_url, filename, score (cosine similarity)
+            Each dict has: image_id, similarity_score
             Sorted by score descending (most similar first).
         """
-        # 1. Encode query image → 512-d L2-normalized vector
-        query_vector = self._encoder.encode(image_bytes)
+        if not image_bytes:
+            return []
+
+        if self._index is None or self._metadata is None:
+            logger.error("Search failed: Index or metadata not loaded.")
+            return []
+
+        try:
+            # 1. Encode query image → 512-d L2-normalized vector
+            query_vector = self._encoder.encode(image_bytes)
+        except Exception as exc:
+            logger.error("Image encoding failed: %s", exc)
+            return []
 
         # 2. FAISS search — IndexFlatIP + L2 vectors = cosine similarity
         query_matrix = np.expand_dims(query_vector, axis=0)  # shape (1, 512)
-        scores, indices = self._index.search(query_matrix, top_k)
+        try:
+            scores, indices = self._index.search(query_matrix, top_k)
+        except Exception as exc:
+            logger.error("FAISS search failed: %s", exc)
+            return []
 
         # 3. Build results from metadata
         results = []
+        if len(indices) == 0 or len(indices[0]) == 0:
+            return results
+
         for score, idx in zip(scores[0], indices[0]):
             if idx == -1:           # FAISS returns -1 for empty slots
                 continue
             meta = self._metadata.get(str(idx), {})
+            image_id = meta.get("filename", meta.get("id", str(idx)))
+            if image_id == "":
+                image_id = str(idx)
+
             results.append({
-                "id":        meta.get("id", str(idx)),
-                "image_url": meta.get("image_url", ""),
-                "filename":  meta.get("filename", ""),
-                "score":     float(score),   # cosine similarity ∈ [-1, 1]
+                "image_id": str(image_id),
+                "similarity_score": float(score),
             })
 
         return results
@@ -193,6 +214,8 @@ class FAISSVectorStore:
     @property
     def size(self) -> int:
         """Number of vectors currently stored in the index."""
+        if self._index is None:
+            return 0
         return self._index.ntotal
 
 
@@ -201,7 +224,7 @@ class FAISSVectorStore:
 # (called from api/routers/search.py via services/search_service.py)
 # ---------------------------------------------------------------------------
 
-def search_similar_items(image_bytes: bytes) -> list[dict]:
+def search_similar_items(image_bytes: bytes, top_k: int = 5) -> list[dict]:
     """
     Agreed Slice 1 → Slice 2 drop-in replacement.
 
@@ -209,17 +232,19 @@ def search_similar_items(image_bytes: bytes) -> list[dict]:
     ----------
     image_bytes : bytes
         Raw bytes from the user's uploaded image.
+    top_k : int
+        Number of items to retrieve.
 
     Returns
     -------
     list[dict]
-        Top-5 similar fashion items, each with id, image_url, score.
+        Top-K similar fashion items.
 
     Example
     -------
     from ai_engine.embeddings.vector_store import search_similar_items
 
-    results = search_similar_items(image_bytes)
-    # [{"id": "42", "image_url": "...", "score": 0.91}, ...]
+    results = search_similar_items(image_bytes, top_k=5)
+    # [{"image_id": "12345.jpg", "similarity_score": 0.91}, ...]
     """
-    return FAISSVectorStore.get_instance().search(image_bytes)
+    return FAISSVectorStore.get_instance().search(image_bytes, top_k=top_k)

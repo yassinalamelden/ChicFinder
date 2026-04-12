@@ -56,7 +56,7 @@ class Retriever:
             List of ClothingItem, ordered from most to least similar.
             Returns empty list if the index is empty.
         """
-        if self.vector_store.size == 0:
+        if getattr(self.vector_store, '_index', None) is None or self.vector_store.size == 0:
             logger.warning("Retriever.retrieve_candidates(): vector store is empty.")
             return []
 

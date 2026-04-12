@@ -72,44 +72,58 @@ class FAISSIndexBuilder:
 
     def build(self, images_dir: Path = DEFAULT_IMAGES_DIR) -> None:
         """
-        Full build pipeline.
-
-        Parameters
-        ----------
-        images_dir : Path
-            Directory containing raw fashion images.
+        Full build pipeline with batching and styles.csv integration.
         """
         import faiss
+        import pandas as pd
 
         images_dir = Path(images_dir)
-        image_paths = self._collect_images(images_dir)
+        styles_csv = Path("data/styles.csv")
 
-        if not image_paths:
-            raise FileNotFoundError(
-                f"No images found in {images_dir}. "
-                "Run scripts/01_download_test_data.py first."
-            )
+        if not styles_csv.exists():
+            raise FileNotFoundError(f"Missing {styles_csv} - required for building")
 
-        logger.info("Building FAISS index for %d images ...", len(image_paths))
-
+        df = pd.read_csv(styles_csv, on_bad_lines="skip")
+        
         index    = faiss.IndexFlatIP(EMBEDDING_DIM)
         metadata = {}
 
-        for idx, path in enumerate(image_paths):
-            try:
-                vector = self._embed_image(path)
-                # FAISS expects shape (1, dim)
-                index.add(np.expand_dims(vector, axis=0))
-                metadata[str(idx)] = {
-                    "id":        str(idx),
-                    "image_url": str(path),
-                    "filename":  path.name,
-                }
-                if (idx + 1) % 10 == 0:
-                    logger.info("  Processed %d / %d", idx + 1, len(image_paths))
+        batch_size = 32
+        total_items = len(df)
+        
+        logger.info("Building FAISS index for %d items (batch_size=%d)...", total_items, batch_size)
 
-            except Exception as exc:
-                logger.warning("Skipping %s — %s", path.name, exc)
+        for start_idx in range(0, total_items, batch_size):
+            end_idx = min(start_idx + batch_size, total_items)
+            batch_df = df.iloc[start_idx:end_idx]
+            
+            for _, row in batch_df.iterrows():
+                item_id = str(row.get("id", ""))
+                if not item_id:
+                    continue
+                    
+                path = images_dir / f"{item_id}.jpg"
+                if not path.exists():
+                    continue
+
+                try:
+                    vector = self._embed_image(path)
+                    index.add(np.expand_dims(vector, axis=0))
+                    
+                    idx_str = str(index.ntotal - 1)
+                    metadata[idx_str] = {
+                        "id": item_id,
+                        "image_url": str(path),
+                        "filename": path.name,
+                        "category": str(row.get("masterCategory", "")),
+                        "color": str(row.get("baseColour", "")),
+                        "gender": str(row.get("gender", "")),
+                    }
+                except Exception as exc:
+                    logger.warning("Skipping %s — %s", path.name, exc)
+                    
+            if end_idx % 100 == 0 or end_idx == total_items:
+                logger.info("  Processed %d / %d", end_idx, total_items)
 
         self._save(index, metadata)
         logger.info(

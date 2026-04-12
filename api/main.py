@@ -21,6 +21,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from api.routes import recommend, health
+from api.routers import search
 from api.middleware.logging import LoggingMiddleware
 from chic_finder.config import settings
 
@@ -96,6 +97,7 @@ app.add_middleware(LoggingMiddleware)
 # Routers
 app.include_router(recommend.router, prefix=settings.API_V1_STR, tags=["recommendation"])
 app.include_router(health.router,    prefix=settings.API_V1_STR, tags=["health"])
+app.include_router(search.router,    prefix=settings.API_V1_STR, tags=["search"])
 
 # ---------------------------------------------------------------------------
 # Ensure required directories exist (must happen BEFORE app.mount calls)

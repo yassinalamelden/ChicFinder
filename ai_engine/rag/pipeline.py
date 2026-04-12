@@ -233,3 +233,57 @@ class RAGPipeline:
         except Exception as exc:
             logger.warning("RAGPipeline._fetch_image: failed to load '%s': %s", source, exc)
             return None
+
+def run_pipeline(image_bytes: bytes) -> list:
+    """Standalone RAG pipeline execution integrating extraction, search, and reranking."""
+    from ai_engine.llm.feature_extractor import extract_features
+    from ai_engine.embeddings.vector_store import search_similar_items, FAISSVectorStore
+    
+    # 1. Extract Features
+    features = extract_features(image_bytes)
+    
+    # 2. Search Similar Items
+    results = search_similar_items(image_bytes, top_k=5)
+    
+    if not results:
+        return []
+        
+    # 3. Rerank
+    store = FAISSVectorStore.get_instance()
+    reranked_results = []
+    
+    feat_category = (features.get("category") or "").lower()
+    feat_color = (features.get("color") or "").lower()
+    feat_gender = (features.get("gender") or "").lower()
+    
+    for item in results:
+        score = item["similarity_score"]
+        image_id = item["image_id"]
+        
+        # Look up metadata from the store
+        meta = None
+        if store._metadata:
+            for k, v in store._metadata.items():
+                if str(v.get("id")) == str(image_id) or str(v.get("filename")) == str(image_id):
+                    meta = v
+                    break
+
+        if meta:
+            meta_category = str(meta.get("category", "")).lower()
+            meta_color = str(meta.get("color", "")).lower()
+            meta_gender = str(meta.get("gender", "")).lower()
+            
+            if feat_category and feat_category == meta_category:
+                score += 0.10
+            if feat_color and feat_color == meta_color:
+                score += 0.05
+            if feat_gender and feat_gender == meta_gender:
+                score += 0.05
+                
+        reranked_results.append({
+            "image_id": str(image_id),
+            "similarity_score": round(score, 4)
+        })
+        
+    reranked_results.sort(key=lambda x: x["similarity_score"], reverse=True)
+    return reranked_results
