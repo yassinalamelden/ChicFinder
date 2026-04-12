@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -12,38 +12,9 @@ import {
 import { auth } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { CanvasRevealEffect } from "@/components/effects/CanvasRevealEffect";
-import FeatureCardStack from "@/app/components/onboarding/FeatureCardStack";
 
-type Step = "email" | "password" | "success" | "onboarding";
+type Step = "email" | "password" | "success";
 type Mode = "signin" | "signup";
-
-const FEATURES = [
-  {
-    icon: "📷",
-    title: "Visual Search",
-    description: "Snap or upload any outfit photo — our AI finds matching pieces across every partner store instantly.",
-  },
-  {
-    icon: "✨",
-    title: "AI Style Matching",
-    description: "FashionCLIP reads colour, silhouette, and texture to surface items that genuinely match your vibe.",
-  },
-  {
-    icon: "🏷️",
-    title: "Real EGP Prices",
-    description: "Every price is pulled live in Egyptian pounds — no currency surprises, no outdated listings.",
-  },
-  {
-    icon: "🏪",
-    title: "Cairo & Beyond",
-    description: "Hand-picked partner stores from across Cairo, Alexandria, and international brands shipping to Egypt.",
-  },
-  {
-    icon: "🔖",
-    title: "Save Your Looks",
-    description: "Bookmark outfits and single pieces to a personal collection you can revisit any time.",
-  },
-];
 
 // ---------------------------------------------------------------------------
 // MiniNavbar
@@ -74,19 +45,14 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [reverseCanvas, setReverseCanvas] = useState(false);
-  const [showStartBtn, setShowStartBtn] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) router.replace("/");
+    if (user) {
+      const onboarded = localStorage.getItem("chicfinder_onboarded");
+      router.replace(onboarded ? "/" : "/onboarding");
+    }
   }, [user, router]);
-
-  // Show start button after cards fan out
-  useEffect(() => {
-    if (step !== "onboarding") return;
-    const timer = setTimeout(() => setShowStartBtn(true), FEATURES.length * 150 + 600);
-    return () => clearTimeout(timer);
-  }, [step]);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +94,7 @@ export default function LoginPage() {
   const triggerSuccess = () => {
     setStep("success");
     setReverseCanvas(true);
-    setTimeout(() => setStep("onboarding"), 1800);
+    setTimeout(() => router.replace("/onboarding"), 1800);
   };
 
   const getFriendlyError = (err: unknown): string => {
@@ -323,36 +289,6 @@ export default function LoginPage() {
                   </svg>
                 </motion.div>
                 <p className="text-white/50">Welcome to ChicFinder</p>
-              </motion.div>
-            )}
-
-            {/* Step: Onboarding */}
-            {step === "onboarding" && (
-              <motion.div
-                key="onboarding"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-8 text-center"
-              >
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Here&apos;s what you can do</h2>
-                  <p className="text-white/40 text-sm mt-1">Everything you need to discover fashion</p>
-                </div>
-
-                <FeatureCardStack features={FEATURES} />
-
-                <AnimatePresence>
-                  {showStartBtn && (
-                    <motion.button
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      onClick={() => router.push("/")}
-                      className="w-full rounded-full bg-white text-black font-semibold py-3 hover:bg-white/90 transition-colors"
-                    >
-                      Start Exploring →
-                    </motion.button>
-                  )}
-                </AnimatePresence>
               </motion.div>
             )}
 
