@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # Default paths  (overridable via env vars or constructor args)
 # ---------------------------------------------------------------------------
 
-DEFAULT_IMAGES_DIR   = Path("data/raw_images")
+DEFAULT_IMAGES_DIR   = Path("data/images")
 DEFAULT_INDEX_PATH   = Path("data/embeddings.index")
 DEFAULT_METADATA_PATH = Path("data/metadata.json")
 
