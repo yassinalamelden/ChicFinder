@@ -8,6 +8,8 @@ venv/
 env/
 .venv/
 .env
+.env.local
+.env.*.local
 
 # Jupyter Notebook
 .ipynb_checkpoints
