@@ -123,5 +123,18 @@ app.mount("/images", StaticFiles(directory=str(_DATA_DIR)), name="images")
 # ---------------------------------------------------------------------------
 
 @app.get("/")
-async def serve_frontend():
-    return FileResponse("index.html")
+async def root():
+    """API root endpoint with project information."""
+    return {
+        "name": settings.PROJECT_NAME,
+        "version": "1.0.0",
+        "description": "Egyptian Fashion Recommendation Engine",
+        "endpoints": {
+            "docs": "http://localhost:8000/docs",
+            "redoc": "http://localhost:8000/redoc",
+            "openapi": "http://localhost:8000/openapi.json",
+            "api_v1": "/api/v1/",
+        },
+        "frontend": "http://localhost:3000",
+        "message": "Frontend served separately at http://localhost:3000"
+    }
