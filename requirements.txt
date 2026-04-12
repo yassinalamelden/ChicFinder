@@ -32,6 +32,9 @@ pandas                    # styles.csv parsing in scripts/ and Slice 3 metadata
 # --- Frontend (Slice 1 — Gendy, Nour) ----------------------
 streamlit                 # UI entry point: frontend/app.py
 
+# --- Firebase Admin SDK -------------------------------------
+firebase-admin            # Server-side Firebase token verification
+
 # --- Health Check & HTTP ------------------------------------
 requests>=2.31.0          # HTTP calls (health check, script downloads, image fetching)
 starlette>=0.27.0         # FastAPI depends on this; pinned for health check

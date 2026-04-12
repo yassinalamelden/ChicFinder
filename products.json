@@ -6,8 +6,13 @@
     "type": "t-shirt",
     "color": "blue",
     "brand": "Mobaco",
+    "store_id": "mobaco",
     "price_egp": 400,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&auto=format&fit=crop",
+    "product_url": "https://mobaco.com",
+    "store_location": "City Stars, Cairo",
+    "description": "Clean-cut blue basic tee crafted from breathable Egyptian cotton."
   },
   {
     "id": "002",
@@ -16,8 +21,13 @@
     "type": "t-shirt",
     "color": "black",
     "brand": "Mobaco",
+    "store_id": "mobaco",
     "price_egp": 400,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600&auto=format&fit=crop",
+    "product_url": "https://mobaco.com",
+    "store_location": "City Stars, Cairo",
+    "description": "A wardrobe staple — versatile black tee for every occasion."
   },
   {
     "id": "003",
@@ -26,8 +36,13 @@
     "type": "t-shirt",
     "color": "white",
     "brand": "Mobaco",
+    "store_id": "mobaco",
     "price_egp": 400,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600&auto=format&fit=crop",
+    "product_url": "https://mobaco.com",
+    "store_location": "City Stars, Cairo",
+    "description": "Crisp white tee — the foundation of any minimalist wardrobe."
   },
   {
     "id": "004",
@@ -36,8 +51,13 @@
     "type": "hoodie",
     "color": "black",
     "brand": "Asili",
+    "store_id": "asili",
     "price_egp": 800,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1556821840-3a63f15732ce?w=600&auto=format&fit=crop",
+    "product_url": "https://asili.com",
+    "store_location": "Downtown Cairo",
+    "description": "Premium heavyweight black hoodie with a kangaroo pocket."
   },
   {
     "id": "005",
@@ -46,8 +66,13 @@
     "type": "hoodie",
     "color": "white",
     "brand": "Asili",
+    "store_id": "asili",
     "price_egp": 800,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&auto=format&fit=crop",
+    "product_url": "https://asili.com",
+    "store_location": "Downtown Cairo",
+    "description": "Clean white hoodie — a contemporary essential for street style."
   },
   {
     "id": "006",
@@ -56,8 +81,13 @@
     "type": "hoodie",
     "color": "black",
     "brand": "Mawlah",
+    "store_id": "mawlah",
     "price_egp": 850,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1578681994506-b8f463449011?w=600&auto=format&fit=crop",
+    "product_url": "https://mawlah.com",
+    "store_location": "Mall of Arabia, Cairo",
+    "description": "Structured black hoodie with embossed logo detail."
   },
   {
     "id": "007",
@@ -66,8 +96,13 @@
     "type": "hoodie",
     "color": "gray",
     "brand": "Mawlah",
+    "store_id": "mawlah",
     "price_egp": 850,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1509942774463-acf339cf87d5?w=600&auto=format&fit=crop",
+    "product_url": "https://mawlah.com",
+    "store_location": "Mall of Arabia, Cairo",
+    "description": "Heathered gray French terry hoodie with contrast drawstrings."
   },
   {
     "id": "008",
@@ -76,8 +111,13 @@
     "type": "jacket",
     "color": "black",
     "brand": "Murenzo",
+    "store_id": "murenzo",
     "price_egp": 2000,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&auto=format&fit=crop",
+    "product_url": "https://murenzo.com",
+    "store_location": "CityStars Mall, Cairo",
+    "description": "Tailored black slim-fit jacket for smart casual occasions."
   },
   {
     "id": "009",
@@ -85,9 +125,14 @@
     "category": "tops",
     "type": "jacket",
     "color": "black",
-    "brand": "Pull and Bear",
+    "brand": "Pull & Bear",
+    "store_id": "pull-and-bear",
     "price_egp": 1800,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=600&auto=format&fit=crop",
+    "product_url": "https://pullandbear.com",
+    "store_location": "Mall of Egypt, Cairo",
+    "description": "Relaxed-fit black jacket with zip-up closure and chest pockets."
   },
   {
     "id": "010",
@@ -96,8 +141,13 @@
     "type": "crewneck",
     "color": "black",
     "brand": "Bershka",
+    "store_id": "bershka",
     "price_egp": 650,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1620799139834-6b8f85b1b6d5?w=600&auto=format&fit=crop",
+    "product_url": "https://bershka.com",
+    "store_location": "Mall of Egypt, Cairo",
+    "description": "Oversized black crewneck sweatshirt — a streetwear essential."
   },
   {
     "id": "011",
@@ -106,8 +156,13 @@
     "type": "crewneck",
     "color": "white",
     "brand": "Bershka",
+    "store_id": "bershka",
     "price_egp": 650,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop",
+    "product_url": "https://bershka.com",
+    "store_location": "Mall of Egypt, Cairo",
+    "description": "Clean white crewneck with ribbed cuffs and hem."
   },
   {
     "id": "012",
@@ -116,8 +171,13 @@
     "type": "sweatpants",
     "color": "gray",
     "brand": "Mobaco",
+    "store_id": "mobaco",
     "price_egp": 700,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=600&auto=format&fit=crop",
+    "product_url": "https://mobaco.com",
+    "store_location": "City Stars, Cairo",
+    "description": "Tapered gray sweatpants with drawstring waist and ankle cuffs."
   },
   {
     "id": "013",
@@ -126,8 +186,13 @@
     "type": "sweatpants",
     "color": "black",
     "brand": "Mobaco",
+    "store_id": "mobaco",
     "price_egp": 700,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&auto=format&fit=crop",
+    "product_url": "https://mobaco.com",
+    "store_location": "City Stars, Cairo",
+    "description": "Slim-fit black sweatpants in brushed fleece for all-day comfort."
   },
   {
     "id": "014",
@@ -136,8 +201,13 @@
     "type": "sweatpants",
     "color": "gray",
     "brand": "Denematic",
+    "store_id": "denematic",
     "price_egp": 750,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600&auto=format&fit=crop",
+    "product_url": "https://denematic.com",
+    "store_location": "Arabella Mall, New Cairo",
+    "description": "Wide-leg gray track pants with side stripe accent."
   },
   {
     "id": "015",
@@ -146,18 +216,28 @@
     "type": "sweatpants",
     "color": "black",
     "brand": "Denematic",
+    "store_id": "denematic",
     "price_egp": 750,
-    "sizes": ["S", "M", "L", "XL"]
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1590330297626-d7aff25a0431?w=600&auto=format&fit=crop",
+    "product_url": "https://denematic.com",
+    "store_location": "Arabella Mall, New Cairo",
+    "description": "Relaxed-fit black joggers with contrast logo embroidery."
   },
   {
     "id": "016",
-    "name": "Blue Jeans",
+    "name": "Blue Slim Jeans",
     "category": "bottoms",
     "type": "jeans",
     "color": "blue",
     "brand": "Concrete",
+    "store_id": "concrete",
     "price_egp": 2000,
-    "sizes": ["28", "30", "32", "34", "36"]
+    "sizes": ["28", "30", "32", "34", "36"],
+    "image_url": "https://images.unsplash.com/photo-1542272454315-4c01d7abdf4a?w=600&auto=format&fit=crop",
+    "product_url": "https://concrete.com.eg",
+    "store_location": "The View, New Cairo",
+    "description": "Slim-cut indigo denim jeans with five-pocket construction."
   },
   {
     "id": "017",
@@ -165,9 +245,14 @@
     "category": "bottoms",
     "type": "jeans",
     "color": "blue",
-    "brand": "Pull and Bear",
+    "brand": "Pull & Bear",
+    "store_id": "pull-and-bear",
     "price_egp": 1600,
-    "sizes": ["28", "30", "32", "34", "36"]
+    "sizes": ["28", "30", "32", "34", "36"],
+    "image_url": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&auto=format&fit=crop",
+    "product_url": "https://pullandbear.com",
+    "store_location": "Mall of Egypt, Cairo",
+    "description": "Relaxed-fit light-wash jeans with distressed hem finish."
   },
   {
     "id": "018",
@@ -176,17 +261,192 @@
     "type": "sneakers",
     "color": "white",
     "brand": "Nike",
+    "store_id": "nike",
     "price_egp": 3500,
-    "sizes": ["38", "39", "40", "41", "42", "43", "44"]
+    "sizes": ["38", "39", "40", "41", "42", "43", "44"],
+    "image_url": "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=600&auto=format&fit=crop",
+    "product_url": "https://nike.com/eg",
+    "store_location": "City Stars, Cairo",
+    "description": "Iconic low-top leather sneakers in classic all-white colorway."
   },
   {
     "id": "019",
-    "name": "Adidas Ultraboost",
+    "name": "Adidas Ultraboost 22",
     "category": "shoes",
     "type": "sneakers",
     "color": "black",
     "brand": "Adidas",
+    "store_id": "adidas",
     "price_egp": 4200,
-    "sizes": ["38", "39", "40", "41", "42", "43", "44"]
+    "sizes": ["38", "39", "40", "41", "42", "43", "44"],
+    "image_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop",
+    "product_url": "https://adidas.com.eg",
+    "store_location": "Mall of Arabia, Cairo",
+    "description": "High-performance running sneakers with Boost midsole technology."
+  },
+  {
+    "id": "020",
+    "name": "Beige Cargo Pants",
+    "category": "bottoms",
+    "type": "cargo",
+    "color": "beige",
+    "brand": "Concrete",
+    "store_id": "concrete",
+    "price_egp": 1750,
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1594938298603-c8148c4b4e44?w=600&auto=format&fit=crop",
+    "product_url": "https://concrete.com.eg",
+    "store_location": "The View, New Cairo",
+    "description": "Relaxed cargo pants with six functional pockets and adjustable hem."
+  },
+  {
+    "id": "021",
+    "name": "Olive Green Cargo",
+    "category": "bottoms",
+    "type": "cargo",
+    "color": "olive",
+    "brand": "Pull & Bear",
+    "store_id": "pull-and-bear",
+    "price_egp": 1400,
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=600&auto=format&fit=crop",
+    "product_url": "https://pullandbear.com",
+    "store_location": "Mall of Egypt, Cairo",
+    "description": "Baggy olive cargo pants with utility pockets and elasticated waist."
+  },
+  {
+    "id": "022",
+    "name": "White Polo Shirt",
+    "category": "tops",
+    "type": "polo",
+    "color": "white",
+    "brand": "Murenzo",
+    "store_id": "murenzo",
+    "price_egp": 950,
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=600&auto=format&fit=crop",
+    "product_url": "https://murenzo.com",
+    "store_location": "CityStars Mall, Cairo",
+    "description": "Classic piqué polo with contrast tipping on collar and cuffs."
+  },
+  {
+    "id": "023",
+    "name": "Navy Blue Polo",
+    "category": "tops",
+    "type": "polo",
+    "color": "navy",
+    "brand": "Murenzo",
+    "store_id": "murenzo",
+    "price_egp": 950,
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop",
+    "product_url": "https://murenzo.com",
+    "store_location": "CityStars Mall, Cairo",
+    "description": "Slim-fit navy polo in premium mercerised cotton."
+  },
+  {
+    "id": "024",
+    "name": "Grey Zip-Up Hoodie",
+    "category": "tops",
+    "type": "hoodie",
+    "color": "gray",
+    "brand": "Bershka",
+    "store_id": "bershka",
+    "price_egp": 720,
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1614975059251-992f11792b9f?w=600&auto=format&fit=crop",
+    "product_url": "https://bershka.com",
+    "store_location": "Mall of Egypt, Cairo",
+    "description": "Full-zip grey hoodie with contrast drawstrings and kangaroo pocket."
+  },
+  {
+    "id": "025",
+    "name": "White Linen Shirt",
+    "category": "tops",
+    "type": "shirt",
+    "color": "white",
+    "brand": "Concrete",
+    "store_id": "concrete",
+    "price_egp": 1200,
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1603252109303-2751441dd157?w=600&auto=format&fit=crop",
+    "product_url": "https://concrete.com.eg",
+    "store_location": "The View, New Cairo",
+    "description": "Breathable white linen shirt with relaxed fit and mother-of-pearl buttons."
+  },
+  {
+    "id": "026",
+    "name": "Black Shorts",
+    "category": "bottoms",
+    "type": "shorts",
+    "color": "black",
+    "brand": "Asili",
+    "store_id": "asili",
+    "price_egp": 500,
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1591195853828-11db59a44f43?w=600&auto=format&fit=crop",
+    "product_url": "https://asili.com",
+    "store_location": "Downtown Cairo",
+    "description": "Relaxed black shorts with elasticated waistband and deep side pockets."
+  },
+  {
+    "id": "027",
+    "name": "Khaki Chino Pants",
+    "category": "bottoms",
+    "type": "chinos",
+    "color": "khaki",
+    "brand": "Murenzo",
+    "store_id": "murenzo",
+    "price_egp": 1650,
+    "sizes": ["28", "30", "32", "34", "36"],
+    "image_url": "https://images.unsplash.com/photo-1555689502-c4b22d76c56f?w=600&auto=format&fit=crop",
+    "product_url": "https://murenzo.com",
+    "store_location": "CityStars Mall, Cairo",
+    "description": "Slim-fit khaki chinos in stretch cotton with tapered leg."
+  },
+  {
+    "id": "028",
+    "name": "Nike React Infinity",
+    "category": "shoes",
+    "type": "sneakers",
+    "color": "white",
+    "brand": "Nike",
+    "store_id": "nike",
+    "price_egp": 4800,
+    "sizes": ["38", "39", "40", "41", "42", "43", "44"],
+    "image_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop",
+    "product_url": "https://nike.com/eg",
+    "store_location": "City Stars, Cairo",
+    "description": "Road-running shoes with ReactX foam for maximum energy return."
+  },
+  {
+    "id": "029",
+    "name": "Adidas Stan Smith",
+    "category": "shoes",
+    "type": "sneakers",
+    "color": "white",
+    "brand": "Adidas",
+    "store_id": "adidas",
+    "price_egp": 2800,
+    "sizes": ["38", "39", "40", "41", "42", "43", "44"],
+    "image_url": "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&auto=format&fit=crop",
+    "product_url": "https://adidas.com.eg",
+    "store_location": "Mall of Arabia, Cairo",
+    "description": "Timeless leather tennis shoes with signature perforated 3-Stripes."
+  },
+  {
+    "id": "030",
+    "name": "Graphic Tee — City",
+    "category": "tops",
+    "type": "t-shirt",
+    "color": "black",
+    "brand": "Denematic",
+    "store_id": "denematic",
+    "price_egp": 550,
+    "sizes": ["S", "M", "L", "XL"],
+    "image_url": "https://images.unsplash.com/photo-1529374255404-311a2a4f1fd9?w=600&auto=format&fit=crop",
+    "product_url": "https://denematic.com",
+    "store_location": "Arabella Mall, New Cairo",
+    "description": "Oversized city-graphic tee in heavyweight cotton with vintage wash."
   }
 ]

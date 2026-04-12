@@ -2,12 +2,6 @@
 api/main.py
 ============
 FastAPI application entry point.
-
-Changes vs original:
-  - Added `lifespan` context manager to pre-warm FAISSVectorStore once at startup.
-  - Mounted ./uploads at /uploads (writable, for query images).
-  - Mounted ./data/images at /dataset (read-only, for dataset images).
-  - Registered the new /upload route (same router file as /recommend).
 """
 
 from contextlib import asynccontextmanager
@@ -17,10 +11,9 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import recommend, health
+from api.routes import recommend, health, stores
 from api.middleware.logging import LoggingMiddleware
 from chic_finder.config import settings
 
@@ -33,22 +26,18 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Load heavy AI artifacts once when the server starts.
-    Gracefully skips if the FAISS index hasn't been built yet.
-    """
-    # Ensure ./uploads/ exists so StaticFiles mount doesn't fail
+    """Load data and pre-warm AI artifacts at startup."""
+
+    # Ensure uploads dir exists
     Path("uploads").mkdir(parents=True, exist_ok=True)
 
-    # Pre-warm the FAISSVectorStore (+ FashionCLIPEncoder inside it)
+    # Pre-warm the FAISSVectorStore (skipped gracefully if not built yet)
     try:
         from ai_engine.embeddings.vector_store import FAISSVectorStore
         FAISSVectorStore.get_instance()
         logger.info("FAISSVectorStore pre-warmed successfully.")
     except FileNotFoundError as exc:
-        logger.warning(
-            "FAISS index not found at startup — searches will fail until built. %s", exc
-        )
+        logger.warning("FAISS index not found at startup — AI search disabled. %s", exc)
     except Exception as exc:
         logger.error("Unexpected error pre-warming FAISSVectorStore: %s", exc)
 
@@ -61,16 +50,28 @@ async def lifespan(app: FastAPI):
             with open(products_path) as f:
                 products = json.load(f)
                 app.state.products = products
-                # Build lookup by ID (padded to match FAISS index logic if needed)
-                # Strategy B: key by id or filename. products.json has id: "001"
-                app.state.products_lookup = {
-                    p.get("id"): p for p in products if p.get("id")
-                }
+                app.state.products_lookup = {p.get("id"): p for p in products if p.get("id")}
                 logger.info("Loaded %d products from products.json", len(products))
         except Exception as exc:
             logger.error("Failed to load products.json: %s", exc)
     else:
         logger.warning("products.json not found at project root")
+
+    # Load stores.json
+    app.state.stores = []
+    app.state.stores_lookup = {}
+    stores_path = Path("stores.json")
+    if stores_path.exists():
+        try:
+            with open(stores_path) as f:
+                store_list = json.load(f)
+                app.state.stores = store_list
+                app.state.stores_lookup = {s.get("id"): s for s in store_list if s.get("id")}
+                logger.info("Loaded %d stores from stores.json", len(store_list))
+        except Exception as exc:
+            logger.error("Failed to load stores.json: %s", exc)
+    else:
+        logger.warning("stores.json not found at project root")
 
     yield  # application runs here
 
@@ -81,24 +82,24 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-# CORS
+# CORS — allow the Next.js dev server and any future deployed origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Custom logging middleware
 app.add_middleware(LoggingMiddleware)
 
 # Routers
 app.include_router(recommend.router, prefix=settings.API_V1_STR, tags=["recommendation"])
 app.include_router(health.router,    prefix=settings.API_V1_STR, tags=["health"])
+app.include_router(stores.router,    prefix=settings.API_V1_STR, tags=["stores"])
 
 # ---------------------------------------------------------------------------
-# Ensure required directories exist (must happen BEFORE app.mount calls)
+# Static file mounts (directories must exist before mounting)
 # ---------------------------------------------------------------------------
 
 _UPLOADS_DIR = Path("uploads")
@@ -106,16 +107,8 @@ _DATA_DIR    = Path("data/raw_images")
 _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 _DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-
-# ---------------------------------------------------------------------------
-# Static file mounts
-# ---------------------------------------------------------------------------
-
-# User-uploaded query images
 app.mount("/uploads", StaticFiles(directory=str(_UPLOADS_DIR)), name="uploads")
-
-# Dataset images — served read-only so frontend can display results by URL
-app.mount("/images", StaticFiles(directory=str(_DATA_DIR)), name="images")
+app.mount("/images",  StaticFiles(directory=str(_DATA_DIR)),    name="images")
 
 
 # ---------------------------------------------------------------------------
@@ -124,17 +117,14 @@ app.mount("/images", StaticFiles(directory=str(_DATA_DIR)), name="images")
 
 @app.get("/")
 async def root():
-    """API root endpoint with project information."""
     return {
         "name": settings.PROJECT_NAME,
         "version": "1.0.0",
         "description": "Egyptian Fashion Recommendation Engine",
         "endpoints": {
-            "docs": "http://localhost:8000/docs",
-            "redoc": "http://localhost:8000/redoc",
-            "openapi": "http://localhost:8000/openapi.json",
-            "api_v1": "/api/v1/",
+            "docs":    "http://localhost:8000/docs",
+            "redoc":   "http://localhost:8000/redoc",
+            "api_v1":  "/api/v1/",
         },
         "frontend": "http://localhost:3000",
-        "message": "Frontend served separately at http://localhost:3000"
     }

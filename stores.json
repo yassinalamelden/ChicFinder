@@ -1,0 +1,92 @@
+[
+  {
+    "id": "mobaco",
+    "name": "Mobaco",
+    "description": "Egyptian streetwear and everyday essentials made for the modern wardrobe.",
+    "logo_url": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&auto=format&fit=crop",
+    "website_url": "https://mobaco.com",
+    "location": "City Stars, Cairo",
+    "categories": ["tops", "bottoms"]
+  },
+  {
+    "id": "asili",
+    "name": "Asili",
+    "description": "Premium hoodies, basics and loungewear rooted in minimalist Egyptian design.",
+    "logo_url": "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=600&auto=format&fit=crop",
+    "website_url": "https://asili.com",
+    "location": "Downtown Cairo",
+    "categories": ["tops", "bottoms"]
+  },
+  {
+    "id": "mawlah",
+    "name": "Mawlah",
+    "description": "Contemporary Egyptian brand crafting bold streetwear with a local soul.",
+    "logo_url": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop",
+    "website_url": "https://mawlah.com",
+    "location": "Mall of Arabia, Cairo",
+    "categories": ["tops"]
+  },
+  {
+    "id": "murenzo",
+    "name": "Murenzo",
+    "description": "Smart casual menswear combining Mediterranean tailoring with Egyptian flair.",
+    "logo_url": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=600&auto=format&fit=crop",
+    "website_url": "https://murenzo.com",
+    "location": "CityStars Mall, Cairo",
+    "categories": ["tops", "bottoms"]
+  },
+  {
+    "id": "pull-and-bear",
+    "name": "Pull & Bear",
+    "description": "International youth fashion brand with a wide selection of casual and trend-driven styles.",
+    "logo_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop",
+    "website_url": "https://pullandbear.com",
+    "location": "Mall of Egypt, Cairo",
+    "categories": ["tops", "bottoms"]
+  },
+  {
+    "id": "bershka",
+    "name": "Bershka",
+    "description": "Fast-fashion brand known for bold graphics, oversized cuts and affordable streetwear.",
+    "logo_url": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&auto=format&fit=crop",
+    "website_url": "https://bershka.com",
+    "location": "Mall of Egypt, Cairo",
+    "categories": ["tops"]
+  },
+  {
+    "id": "concrete",
+    "name": "Concrete",
+    "description": "Egyptian-born upscale streetwear — premium materials, considered silhouettes.",
+    "logo_url": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=600&auto=format&fit=crop",
+    "website_url": "https://concrete.com.eg",
+    "location": "The View, New Cairo",
+    "categories": ["tops", "bottoms"]
+  },
+  {
+    "id": "denematic",
+    "name": "Denematic",
+    "description": "Denim-first Cairo brand specialising in premium washes, cargos and graphic tees.",
+    "logo_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop",
+    "website_url": "https://denematic.com",
+    "location": "Arabella Mall, New Cairo",
+    "categories": ["bottoms", "tops"]
+  },
+  {
+    "id": "nike",
+    "name": "Nike",
+    "description": "World-leading sportswear brand. Find iconic footwear and activewear at Egypt locations.",
+    "logo_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop",
+    "website_url": "https://nike.com/eg",
+    "location": "City Stars, Cairo",
+    "categories": ["shoes"]
+  },
+  {
+    "id": "adidas",
+    "name": "Adidas",
+    "description": "Global sports and lifestyle brand — footwear, apparel, and accessories for every athlete.",
+    "logo_url": "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&auto=format&fit=crop",
+    "website_url": "https://adidas.com.eg",
+    "location": "Mall of Arabia, Cairo",
+    "categories": ["shoes"]
+  }
+]
