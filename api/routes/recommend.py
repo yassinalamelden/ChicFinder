@@ -2,15 +2,22 @@
 api/routes/recommend.py
 ========================
 Two routes:
-  POST /upload   — save image, return URL
-  POST /recommend — pick 4 random products from products.json, return them
+  POST /upload   — save image, return URL           (auth required)
+  POST /recommend — return SearchResponse from products.json (auth required)
+
+The /recommend endpoint intentionally returns mock-random results.
+The real RAG pipeline will be wired in by the AI team via RecommendationService.
 """
 
 import random
+import time
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+
+from api.dependencies.auth import get_current_user
+from api.models.schemas import ChicFinderResult, SearchResponse
 
 router = APIRouter()
 
@@ -20,12 +27,10 @@ router = APIRouter()
 
 UPLOADS_DIR = Path("uploads")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-MIN_SCORE = 75
-MAX_SCORE = 99
+TOP_K = 8
 
 
 def _ensure_uploads_dir() -> None:
-    """Create ./uploads/ if it doesn't exist."""
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -34,7 +39,10 @@ def _ensure_uploads_dir() -> None:
 # ---------------------------------------------------------------------------
 
 @router.post("/upload")
-async def upload_image(file: UploadFile = File(...)):
+async def upload_image(
+    file: UploadFile = File(...),
+    _user: dict = Depends(get_current_user),
+):
     """
     POST /api/v1/upload
 
@@ -44,16 +52,12 @@ async def upload_image(file: UploadFile = File(...)):
     """
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid file type. Images only.",
-        )
+        raise HTTPException(status_code=400, detail="Invalid file type. Images only.")
 
     _ensure_uploads_dir()
 
     saved_filename = f"{uuid.uuid4()}_{file.filename}"
     save_path = UPLOADS_DIR / saved_filename
-
     contents = await file.read()
     save_path.write_bytes(contents)
 
@@ -68,79 +72,62 @@ async def upload_image(file: UploadFile = File(...)):
 # POST /recommend
 # ---------------------------------------------------------------------------
 
-@router.post("/recommend")
-async def get_recommendations(request: Request, file: UploadFile = File(...)):
+@router.post("/recommend", response_model=SearchResponse)
+async def get_recommendations(
+    request: Request,
+    file: UploadFile = File(...),
+    _user: dict = Depends(get_current_user),
+):
     """
     POST /api/v1/recommend
 
     Accepts a multipart image file.
     Saves the uploaded image to ./uploads/.
-    Returns 4 random products from products.json (loaded at startup).
+    Returns a SearchResponse with products randomly selected from products.json.
+
+    NOTE: The AI team will swap this stub out for the real RAG pipeline.
     """
-    # Validate extension
+    start = time.time()
+
     suffix = Path(file.filename or "image.jpg").suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid file type. Images only.",
-        )
+        raise HTTPException(status_code=400, detail="Invalid file type. Images only.")
 
-    # Save upload so user can see their query image
+    # Save the uploaded query image
     image_bytes = await file.read()
     _ensure_uploads_dir()
     saved_filename = f"{uuid.uuid4()}_{file.filename or 'image.jpg'}"
     (UPLOADS_DIR / saved_filename).write_bytes(image_bytes)
-    query_url = f"/uploads/{saved_filename}"
 
-    # Load products from app state (populated at startup in main.py)
+    # Load products from app state
     products = getattr(request.app.state, "products", [])
-
-    if len(products) == 0:
+    if not products:
         raise HTTPException(
             status_code=503,
             detail="No products loaded. Check products.json exists at project root.",
         )
 
-    # Pick 4 random products
-    sample_size = min(4, len(products))
+    # Random selection (RAG team will replace this)
+    sample_size = min(TOP_K, len(products))
     selected = random.sample(products, sample_size)
 
-    # Build recommendations — products.json has no image field,
-    # so image stays empty (frontend can show a placeholder)
-    recommendations = []
-    for rank, product in enumerate(selected, start=1):
-        # products.json has no image/image_url/img/photo field
-        image_field = (
-            product.get("image") or
-            product.get("image_url") or
-            product.get("img") or
-            product.get("photo") or
-            product.get("thumbnail") or
-            ""
+    results = [
+        ChicFinderResult(
+            image_id=p.get("id", str(i)),
+            similarity_score=round(random.uniform(0.75, 0.99), 2),
+            brand=p.get("brand"),
+            price_egp=p.get("price_egp"),
+            product_url=p.get("product_url"),
+            store_location=p.get("store_location"),
+            image_url=p.get("image_url", ""),
+            availability_egypt=True,
         )
-        # Make relative paths absolute
-        if (image_field
-                and not image_field.startswith("http")
-                and not image_field.startswith("/")):
-            image_field = f"/images/{image_field}"
+        for i, p in enumerate(selected)
+    ]
 
-        recommendations.append({
-            "rank":     rank,
-            "score":    round(random.uniform(MIN_SCORE, MAX_SCORE), 1),
-            # products.json actual field names
-            "name":     product.get("name") or f"Item {rank}",
-            "image":    image_field,
-            "price":    product.get("price_egp", ""),   # actual field is price_egp
-            "brand":    product.get("brand", ""),
-            "category": product.get("category", ""),
-            "color":    product.get("color", ""),
-            "type":     product.get("type", ""),
-            "sizes":    product.get("sizes", []),
-            "product":  product,
-        })
+    elapsed_ms = (time.time() - start) * 1000
 
-    return {
-        "success":         True,
-        "query_url":       query_url,
-        "recommendations": recommendations,
-    }
+    return SearchResponse(
+        results=results,
+        processing_time_ms=round(elapsed_ms, 1),
+    )

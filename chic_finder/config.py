@@ -30,4 +30,7 @@ class Config:
     SEGMENTER_MODEL_PATH: str = field(default_factory=lambda: os.getenv("SEGMENTER_MODEL_PATH", "models/segmenter_vit_b.pth"))
     ENCODER_MODEL_PATH: str = field(default_factory=lambda: os.getenv("ENCODER_MODEL_PATH", "models/fashion_encoder_vgg16.pth"))
 
+    # Firebase Admin SDK
+    FIREBASE_CREDENTIALS_PATH: str = field(default_factory=lambda: os.getenv("FIREBASE_CREDENTIALS_PATH", ""))
+
 settings = Config()
