@@ -1,0 +1,15 @@
+{
+  "name": "chicfinder",
+  "version": "1.0.0",
+  "description": "Egyptian Fashion Recommendation Engine",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload\" \"cd website_fullstack && npm run dev\"",
+    "dev:backend": "python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload",
+    "dev:frontend": "cd website_fullstack && npm run dev",
+    "build": "cd website_fullstack && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
