@@ -32,14 +32,15 @@ async def lifespan(app: FastAPI):
     Path("uploads").mkdir(parents=True, exist_ok=True)
 
     # Pre-warm the FAISSVectorStore (skipped gracefully if not built yet)
-    try:
-        from ai_engine.embeddings.vector_store import FAISSVectorStore
-        FAISSVectorStore.get_instance()
-        logger.info("FAISSVectorStore pre-warmed successfully.")
-    except FileNotFoundError as exc:
-        logger.warning("FAISS index not found at startup — AI search disabled. %s", exc)
-    except Exception as exc:
-        logger.error("Unexpected error pre-warming FAISSVectorStore: %s", exc)
+    # DEV: Disabled for local development
+    # try:
+    #     from ai_engine.embeddings.vector_store import FAISSVectorStore
+    #     FAISSVectorStore.get_instance()
+    #     logger.info("FAISSVectorStore pre-warmed successfully.")
+    # except FileNotFoundError as exc:
+    #     logger.warning("FAISS index not found at startup — AI search disabled. %s", exc)
+    # except Exception as exc:
+    #     logger.error("Unexpected error pre-warming FAISSVectorStore: %s", exc)
 
     # Load products.json
     app.state.products = []

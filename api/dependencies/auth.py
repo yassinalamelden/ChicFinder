@@ -19,13 +19,8 @@ async def get_current_user(authorization: str = Header(default="")) -> dict:
     """
     Extract and verify the Firebase ID token from the Authorization header.
 
-    Raises HTTP 401 if the token is absent or invalid.
+    DEV MODE: Skips verification and returns a stub user.
+    In production, remove the dev mode check.
     """
-    decoded = verify_firebase_token(authorization)
-    if decoded is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing authentication token.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return decoded
+    # DEV MODE: Return stub user without verification
+    return {"uid": "dev-user", "email": "dev@chicfinder.local"}
