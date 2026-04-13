@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import base64
-from frontend.results_gallery import render_results
+from results_gallery import render_results
 
 st.set_page_config(
     page_title="ChicFinder - Outfit Recommendation Expert",
