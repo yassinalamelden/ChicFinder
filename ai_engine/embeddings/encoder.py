@@ -24,6 +24,8 @@ from __future__ import annotations
 
 import io
 import logging
+import os
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -35,17 +37,20 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-CLIP_MODEL_ID  = "patrickjohncyh/fashion-clip"
-EMBEDDING_DIM  = 512   # fixed — agreed contract across all slices
+CLIP_MODEL_ID = "patrickjohncyh/fashion-clip"
+DEFAULT_LOCAL_CLIP_PATH = "models/fine_tuned_clip"
+EMBEDDING_DIM = 512  # fixed — agreed contract across all slices
 
 
 # ---------------------------------------------------------------------------
 # Lazy imports
 # ---------------------------------------------------------------------------
 
+
 def _load_transformers():
     try:
         from transformers import CLIPModel, CLIPProcessor
+
         return CLIPModel, CLIPProcessor
     except ImportError as exc:
         raise ImportError("Run: pip install transformers") from exc
@@ -54,6 +59,7 @@ def _load_transformers():
 def _load_torch():
     try:
         import torch
+
         return torch
     except ImportError as exc:
         raise ImportError("Run: pip install torch") from exc
@@ -62,6 +68,7 @@ def _load_torch():
 # ---------------------------------------------------------------------------
 # FashionCLIPEncoder  (Singleton)
 # ---------------------------------------------------------------------------
+
 
 class FashionCLIPEncoder:
     """
@@ -84,9 +91,22 @@ class FashionCLIPEncoder:
         torch = _load_torch()
         CLIPModel, CLIPProcessor = _load_transformers()
 
-        logger.info("Loading FashionCLIP: %s", CLIP_MODEL_ID)
-        self._processor = CLIPProcessor.from_pretrained(CLIP_MODEL_ID)
-        self._model     = CLIPModel.from_pretrained(CLIP_MODEL_ID)
+        configured_model_path = os.getenv("CLIP_MODEL_PATH", DEFAULT_LOCAL_CLIP_PATH)
+        local_model_path = Path(configured_model_path)
+
+        if local_model_path.exists():
+            logger.info("Loading local CLIP model from: %s", local_model_path)
+            model_source = str(local_model_path)
+        else:
+            logger.info(
+                "Local CLIP model not found at %s. Falling back to %s",
+                local_model_path,
+                CLIP_MODEL_ID,
+            )
+            model_source = CLIP_MODEL_ID
+
+        self._processor = CLIPProcessor.from_pretrained(model_source)
+        self._model = CLIPModel.from_pretrained(model_source)
         self._model.eval()
 
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -94,7 +114,8 @@ class FashionCLIPEncoder:
 
         logger.info(
             "FashionCLIPEncoder ready | device=%s | dim=%d",
-            self._device, EMBEDDING_DIM,
+            self._device,
+            EMBEDDING_DIM,
         )
 
     # ------------------------------------------------------------------
@@ -126,7 +147,7 @@ class FashionCLIPEncoder:
         np.ndarray
             shape=(512,), dtype=float32, ||v||_2 = 1.0
         """
-        image     = self._decode(image_bytes)
+        image = self._decode(image_bytes)
         embedding = self._encode(image)
         return self._normalize(embedding)
 
@@ -144,8 +165,9 @@ class FashionCLIPEncoder:
     def _encode(self, image: Image.Image) -> np.ndarray:
         """PIL image → raw 512-d numpy vector via FashionCLIP."""
         import torch
-        inputs  = self._processor(images=image, return_tensors="pt")
-        inputs  = {k: v.to(self._device) for k, v in inputs.items()}
+
+        inputs = self._processor(images=image, return_tensors="pt")
+        inputs = {k: v.to(self._device) for k, v in inputs.items()}
         with torch.no_grad():
             vision_outputs = self._model.vision_model(**inputs)
             features = self._model.visual_projection(vision_outputs.pooler_output)
@@ -164,6 +186,7 @@ class FashionCLIPEncoder:
 # ---------------------------------------------------------------------------
 # Convenience accessor (used everywhere in the project)
 # ---------------------------------------------------------------------------
+
 
 def get_encoder() -> FashionCLIPEncoder:
     """
