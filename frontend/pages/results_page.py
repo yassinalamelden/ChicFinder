@@ -1,5 +1,5 @@
 import streamlit as st
-from frontend.components.image_card import image_card
+from components.image_card import image_card
 
 def show():
     """grid of recommended items."""
