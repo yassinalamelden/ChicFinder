@@ -36,23 +36,22 @@ function MiniNavbar() {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   const [step, setStep] = useState<Step>("email");
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   const [reverseCanvas, setReverseCanvas] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      const onboarded = localStorage.getItem("chicfinder_onboarded");
-      router.replace(onboarded ? "/" : "/onboarding");
+    if (!loading && user && step !== "success") {
+      router.replace("/onboarding");
     }
-  }, [user, router]);
+  }, [user, loading, step, router]);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +60,7 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setError("");
-    setLoading(true);
+    setFormLoading(true);
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
@@ -69,14 +68,14 @@ export default function LoginPage() {
     } catch (err: unknown) {
       setError(getFriendlyError(err));
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setFormLoading(true);
     try {
       if (mode === "signin") {
         await signInWithEmailAndPassword(auth, email, password);
@@ -87,7 +86,7 @@ export default function LoginPage() {
     } catch (err: unknown) {
       setError(getFriendlyError(err));
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
@@ -164,7 +163,7 @@ export default function LoginPage() {
                 <div className="space-y-4">
                   <button
                     onClick={handleGoogleSignIn}
-                    disabled={loading}
+                    disabled={formLoading}
                     className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-full py-3 px-4 transition-colors disabled:opacity-60"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -250,10 +249,10 @@ export default function LoginPage() {
                     </button>
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={formLoading}
                       className="flex-1 rounded-full bg-white text-black font-semibold py-3 hover:bg-white/90 transition-colors disabled:opacity-60"
                     >
-                      {loading ? "..." : mode === "signin" ? "Sign In" : "Sign Up"}
+                      {formLoading ? "..." :mode === "signin" ? "Sign In" : "Sign Up"}
                     </button>
                   </div>
                 </form>
