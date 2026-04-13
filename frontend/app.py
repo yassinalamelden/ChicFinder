@@ -64,11 +64,10 @@ if uploaded_file is not None:
                 response = requests.post("http://localhost:8000/search", json=payload)
                 response.raise_for_status()
                 data = response.json()
-            except Exception as e:
-                st.error(f"Failed to connect to backend: {e}")
+            except Exception:
+                st.warning("Backend is currently unreachable. Switching to mock test data.")
                 
                 # Mock API response works perfectly for local testing
-                st.info("Using mock API response since backend is down/unreachable:")
                 data = {
                     "processing_time_ms": 210.3,
                     "results": [
