@@ -52,17 +52,17 @@ export async function postRecommend(file: File): Promise<SearchResponse> {
 }
 
 // ---------------------------------------------------------------------------
-// Stores
+// Stores (public — no auth token required)
 // ---------------------------------------------------------------------------
 
 export async function getStores(): Promise<Store[]> {
-  const res = await authFetch("/api/v1/stores");
+  const res = await fetch(`${BASE_URL}/api/v1/stores`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json() as Promise<Store[]>;
 }
 
 export async function getStoreDetail(storeId: string): Promise<StoreDetailResponse> {
-  const res = await authFetch(`/api/v1/stores/${storeId}`);
+  const res = await fetch(`${BASE_URL}/api/v1/stores/${storeId}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json() as Promise<StoreDetailResponse>;
 }
@@ -77,7 +77,7 @@ export async function getStoreItems(
   if (search) params.set("search", search);
   const qs = params.toString() ? `?${params}` : "";
 
-  const res = await authFetch(`/api/v1/stores/${storeId}/items${qs}`);
+  const res = await fetch(`${BASE_URL}/api/v1/stores/${storeId}/items${qs}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json() as Promise<StoreItem[]>;
 }
