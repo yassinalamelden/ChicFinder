@@ -46,14 +46,6 @@ export default function LoginPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [reverseCanvas, setReverseCanvas] = useState(false);
 
-  // Redirect if already logged in
-  useEffect(() => {
-    if (!loading && user && step !== "success") {
-      const onboarded = localStorage.getItem("chicfinder_onboarded");
-      router.replace(onboarded ? "/" : "/onboarding");
-    }
-  }, [user, loading, step, router]);
-
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) setStep("password");
@@ -94,8 +86,7 @@ export default function LoginPage() {
   const triggerSuccess = () => {
     setStep("success");
     setReverseCanvas(true);
-    const onboarded = localStorage.getItem("chicfinder_onboarded");
-    setTimeout(() => router.replace(onboarded ? "/" : "/onboarding"), 1800);
+    setTimeout(() => router.replace("/onboarding"), 1800);
   };
 
   const getFriendlyError = (err: unknown): string => {

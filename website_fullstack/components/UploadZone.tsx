@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Camera, Upload, X, RotateCw } from "lucide-react";
 
 interface UploadZoneProps {
@@ -40,15 +40,20 @@ export function UploadZone({ onFileSelected, isLoading = false }: UploadZoneProp
     setPendingFile(null);
   };
 
-  const openCamera = async () => {
+  // Set srcObject after the video element mounts (cameraOpen renders it into the DOM)
+  useEffect(() => {
+    if (cameraOpen && videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [cameraOpen, stream]);
+
+  const openCamera = async (overrideFacingMode?: "environment" | "user") => {
+    const mode = overrideFacingMode ?? facingMode;
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: facingMode } },
+        video: { facingMode: { ideal: mode } },
       });
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
       setCameraOpen(true);
     } catch (error) {
       console.warn("getUserMedia not available or denied, falling back to capture input:", error);
@@ -92,10 +97,9 @@ export function UploadZone({ onFileSelected, isLoading = false }: UploadZoneProp
 
   const flipCamera = async () => {
     closeCamera();
-    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
-    setTimeout(() => {
-      openCamera();
-    }, 100);
+    const newMode = facingMode === "environment" ? "user" : "environment";
+    setFacingMode(newMode);
+    openCamera(newMode);
   };
 
   return (
