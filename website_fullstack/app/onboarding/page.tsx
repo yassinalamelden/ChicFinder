@@ -64,7 +64,7 @@ export default function OnboardingPage() {
 
   const handleStartExploring = () => {
     localStorage.setItem("chicfinder_onboarded", "true");
-    router.push("/");
+    router.push("/home");
   };
 
   return (
