@@ -44,7 +44,7 @@ for item in mock_data:
     
     # Create the image and save it using the item's ID
     img = Image.new("RGB", (224, 224), rgb)
-    img_path = f"data/images/{item['id']}.jpg"
+    img_path = f"data/raw_images/{item['id']}.jpg"
     img.save(img_path)
     
     print(f"✅ Saved {img_path} ({item['name']})")
