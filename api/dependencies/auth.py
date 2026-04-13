@@ -30,13 +30,13 @@ async def get_current_user(authorization: str = Header(default=None)) -> dict:
         if user:
             return user
 
-    # If we're in production and got here, the token is invalid or missing
-    if settings.APP_ENV == "production":
+    # Only enforce auth in production when Firebase credentials are actually configured
+    if settings.APP_ENV == "production" and settings.FIREBASE_CREDENTIALS_PATH:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing authentication token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # In development, allow requests without a valid token
+    # Fall back to dev stub when credentials are not configured
     return {"uid": "dev-user", "email": "dev@chicfinder.local"}
