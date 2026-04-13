@@ -7,9 +7,8 @@ Routes:
   GET /api/v1/stores/{store_id}/items   → items with optional filters
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
-from api.dependencies.auth import get_current_user
 from api.models.schemas import Store, StoreDetailResponse, StoreItem
 
 router = APIRouter()
@@ -40,7 +39,6 @@ def _product_to_store_item(p: dict) -> StoreItem:
 @router.get("/stores", response_model=list[Store])
 async def list_stores(
     request: Request,
-    _user: dict = Depends(get_current_user),
 ):
     """Return all collaborating stores."""
     stores = getattr(request.app.state, "stores", [])
@@ -55,7 +53,6 @@ async def list_stores(
 async def get_store(
     store_id: str,
     request: Request,
-    _user: dict = Depends(get_current_user),
 ):
     """Return store metadata plus all its products."""
     stores_lookup = getattr(request.app.state, "stores_lookup", {})
@@ -83,7 +80,6 @@ async def get_store_items(
     request: Request,
     category: str = Query(default="", description="Filter by category (tops/bottoms/shoes)"),
     search: str = Query(default="", description="Text search on name and type"),
-    _user: dict = Depends(get_current_user),
 ):
     """Return items for a store with optional category and text filters."""
     stores_lookup = getattr(request.app.state, "stores_lookup", {})

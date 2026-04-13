@@ -27,3 +27,13 @@ models/
 .vscode/
 .idea/
 node_modules
+
+# Agent / local operating files
+LOCAL_OPERATING_SUMMARY.md
+status.md
+handoff.md
+artifacts/
+evals/
+runs/
+logs/
+FAILURE.md
