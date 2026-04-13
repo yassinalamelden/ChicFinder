@@ -8,17 +8,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        "cf-bg": "#0d0d0d",
-        "cf-surface": "#161616",
-        "cf-card": "#1c1c1c",
-        "cf-border": "#2a2a2a",
-        "cf-accent": "#e8ff47",
-        "cf-accent2": "#ff6b35",
-        "cf-text": "#f0f0f0",
-        "cf-muted": "#777777",
+        "cf-bg": "#121210",
+        "cf-surface": "#1d1c19",
+        "cf-card": "#242320",
+        "cf-border": "#333230",
+        "cf-accent": "#f5c842",
+        "cf-accent2": "#e05a3a",
+        "cf-text": "#f2ede8",
+        "cf-muted": "#847f79",
       },
       fontFamily: {
-        display: ["var(--font-bebas)", "sans-serif"],
+        display: ["var(--font-instrument-serif)", "serif"],
         body: ["var(--font-dm-sans)", "sans-serif"],
       },
     },
