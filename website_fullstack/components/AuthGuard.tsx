@@ -15,16 +15,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, pathname, router]);
 
-  if (loading) {
+  if (loading || (!user && pathname !== "/login")) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
       </div>
     );
-  }
-
-  if (!user && pathname !== "/login") {
-    return null;
   }
 
   return <>{children}</>;
