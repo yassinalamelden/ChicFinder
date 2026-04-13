@@ -25,7 +25,7 @@ router = APIRouter()
 # Constants
 # ---------------------------------------------------------------------------
 
-UPLOADS_DIR = Path("uploads")
+UPLOADS_DIR = Path(__file__).parent.parent.parent / "uploads"
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 TOP_K = 8
 

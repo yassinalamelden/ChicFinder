@@ -14,6 +14,7 @@ class Config:
     # API Settings
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "ChicFinder"
+    APP_ENV: str = field(default_factory=lambda: os.getenv("APP_ENV", "development"))
     
     # OpenAI Settings
     OPENAI_API_KEY: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))

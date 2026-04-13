@@ -15,12 +15,28 @@ from fastapi import Header, HTTPException, status
 from api.middleware.auth import verify_firebase_token
 
 
-async def get_current_user(authorization: str = Header(default="")) -> dict:
+async def get_current_user(authorization: str = Header(default=None)) -> dict:
     """
     Extract and verify the Firebase ID token from the Authorization header.
 
-    DEV MODE: Skips verification and returns a stub user.
-    In production, remove the dev mode check.
+    In development mode (APP_ENV != "production"), returns a stub user without verification.
+    In production, verifies the token against Firebase Admin SDK and raises 401 on failure.
     """
-    # DEV MODE: Return stub user without verification
+    from chic_finder.config import settings
+
+    # Try to verify the token
+    if authorization:
+        user = verify_firebase_token(authorization)
+        if user:
+            return user
+
+    # If we're in production and got here, the token is invalid or missing
+    if settings.APP_ENV == "production":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # In development, allow requests without a valid token
     return {"uid": "dev-user", "email": "dev@chicfinder.local"}

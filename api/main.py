@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     # Load products.json
     app.state.products = []
     app.state.products_lookup = {}
-    products_path = Path("products.json")
+    products_path = Path(__file__).parent.parent / "products.json"
     if products_path.exists():
         try:
             with open(products_path) as f:
@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI):
     # Load stores.json
     app.state.stores = []
     app.state.stores_lookup = {}
-    stores_path = Path("stores.json")
+    stores_path = Path(__file__).parent.parent / "stores.json"
     if stores_path.exists():
         try:
             with open(stores_path) as f:
@@ -86,7 +86,7 @@ app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 # CORS — allow the Next.js dev server and any future deployed origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

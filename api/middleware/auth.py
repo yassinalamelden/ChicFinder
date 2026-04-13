@@ -62,7 +62,21 @@ def verify_firebase_token(authorization: str) -> Optional[dict]:
     if not token:
         return None
 
-    # DEV MODE: Skip Firebase verification and return stub user
-    # In production, remove this and ensure Firebase Admin SDK is configured
-    logger.warning("DEV MODE: Skipping Firebase verification, returning stub user.")
-    return {"uid": "dev-user", "email": "dev@chicfinder.local"}
+    # In development mode, skip Firebase verification
+    from chic_finder.config import settings
+    if settings.APP_ENV != "production":
+        logger.info("Development mode: skipping Firebase verification.")
+        return {"uid": "dev-user", "email": "dev@chicfinder.local"}
+
+    # Production: verify Firebase token
+    if not _init_firebase():
+        logger.error("Firebase Admin SDK not initialised; cannot verify token")
+        return None
+
+    try:
+        from firebase_admin import auth
+        decoded = auth.verify_id_token(token)
+        return {"uid": decoded["uid"], "email": decoded.get("email")}
+    except Exception as exc:
+        logger.warning("Firebase token verification failed: %s", exc)
+        return None
