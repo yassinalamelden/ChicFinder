@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LogOut } from "lucide-react";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
+  { href: "/home", label: "Home" },
   { href: "/stores", label: "Stores" },
 ];
 
@@ -17,7 +17,7 @@ export function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/60 backdrop-blur-md">
       {/* Logo */}
-      <Link href="/" className="text-sm font-semibold tracking-widest text-white/90 uppercase hover:text-white transition-colors">
+      <Link href="/home" className="text-sm font-semibold tracking-widest text-white/90 uppercase hover:text-white transition-colors">
         ChicFinder
       </Link>
 
