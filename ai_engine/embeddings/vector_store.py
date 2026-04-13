@@ -20,6 +20,7 @@ from typing import Optional
 
 import numpy as np
 
+from ai_engine.embeddings.database_builder import DEFAULT_IMAGES_DIR
 from ai_engine.embeddings.encoder import get_encoder
 
 logger = logging.getLogger(__name__)
@@ -137,7 +138,7 @@ class FAISSVectorStore:
             if isinstance(meta, str):
                 filename = meta
                 item_id = Path(filename).stem
-                image_url = str(Path("data/raw_images") / filename)
+                image_url = str(DEFAULT_IMAGES_DIR / filename)
             else:
                 filename = meta.get("filename", "")
                 item_id = meta.get("id", str(idx))
@@ -189,7 +190,7 @@ class FAISSVectorStore:
                 payload = {
                     "_id": item_id,
                     "id": item_id,
-                    "image_url": str(Path("data/raw_images") / filename),
+                    "image_url": str(DEFAULT_IMAGES_DIR / filename),
                     "filename": filename,
                 }
             else:

@@ -67,7 +67,7 @@ Collect a dataset of Egyptian local fashion brand products with images and struc
 ## 🔗 Dependencies & Integration
 
 ### Depends On
-- **Gaber's Issue #7** — metadata schema definition (coordinate to ensure `metadata.json` structure aligns)
+- **Gaber's Issue #8** — metadata schema definition (coordinate to ensure `metadata.json` structure aligns)
 
 ### Blocks
 - **Amr's Issue #5** — `FAISSIndexBuilder` requires `data/raw_images/` and `data/metadata.json`
