@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import io
 import logging
+import os
 from typing import Optional
 
 import numpy as np
@@ -34,8 +35,11 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
+LOCAL_MODEL_PATH = "models/fine_tuned_clip"
+DEFAULT_MODEL_ID = "patrickjohncyh/fashion-clip"
 
-CLIP_MODEL_ID  = "patrickjohncyh/fashion-clip"
+# Use local if exists, otherwise fallback to remote
+CLIP_MODEL_ID  = LOCAL_MODEL_PATH if os.path.exists(LOCAL_MODEL_PATH) else DEFAULT_MODEL_ID
 EMBEDDING_DIM  = 512   # fixed — agreed contract across all slices
 
 
