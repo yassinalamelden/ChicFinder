@@ -49,7 +49,8 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (!loading && user && step !== "success") {
-      router.replace("/onboarding");
+      const onboarded = localStorage.getItem("chicfinder_onboarded");
+      router.replace(onboarded ? "/" : "/onboarding");
     }
   }, [user, loading, step, router]);
 
@@ -93,7 +94,8 @@ export default function LoginPage() {
   const triggerSuccess = () => {
     setStep("success");
     setReverseCanvas(true);
-    setTimeout(() => router.replace("/onboarding"), 1800);
+    const onboarded = localStorage.getItem("chicfinder_onboarded");
+    setTimeout(() => router.replace(onboarded ? "/" : "/onboarding"), 1800);
   };
 
   const getFriendlyError = (err: unknown): string => {
