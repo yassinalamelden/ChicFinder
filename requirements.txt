@@ -28,6 +28,7 @@ opencv-python-headless    # image processing utilities (headless for server envi
 
 # --- Data & Scripts (Slice 2 scripts + Slice 3) -------------
 pandas                    # styles.csv parsing in scripts/ and Slice 3 metadata
+tqdm                      # progress bars for offline indexing pipeline
 
 # --- Frontend (Slice 1 — Gendy, Nour) ----------------------
 streamlit                 # UI entry point: frontend/app.py

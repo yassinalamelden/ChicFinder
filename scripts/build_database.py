@@ -2,7 +2,7 @@
 scripts/build_database.py — Offline FAISS index builder for ChicFinder.
 
 Encodes all images in a directory using FashionCLIP (512-dim, L2-normalized)
-and saves the resulting FAISS IndexFlatIP to disk alongside a metadata JSON.
+and saves the resulting FAISS IndexFlatIP to disk alongside an index mapping JSON.
 
 Usage:
   python -m scripts.build_database --images ./data/raw_images
@@ -12,6 +12,7 @@ Usage:
 import argparse
 import logging
 import sys
+import warnings
 from pathlib import Path
 
 # Ensure project root is on sys.path when running as a script
@@ -19,7 +20,11 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from ai_engine.embeddings.database_builder import FAISSIndexBuilder, DEFAULT_INDEX_PATH, DEFAULT_METADATA_PATH
+from ai_engine.embeddings.database_builder import (
+    DEFAULT_INDEX_PATH,
+    DEFAULT_MAPPING_PATH,
+    FAISSIndexBuilder,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,6 +35,12 @@ logger = logging.getLogger("build_database")
 
 
 def main():
+    warnings.warn(
+        "scripts/build_database.py is deprecated. Use scripts/02_build_faiss_index.py instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     parser = argparse.ArgumentParser(
         description="ChicFinder — Build the FAISS fashion retrieval database.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -53,9 +64,9 @@ def main():
     parser.add_argument(
         "--meta",
         type=str,
-        default=str(DEFAULT_METADATA_PATH),
+        default=str(DEFAULT_MAPPING_PATH),
         metavar="PATH",
-        help=f"Output path for metadata JSON (default: {DEFAULT_METADATA_PATH}).",
+        help=f"Output path for mapping JSON (default: {DEFAULT_MAPPING_PATH}).",
     )
 
     args = parser.parse_args()
@@ -63,7 +74,7 @@ def main():
     logger.info("Initializing FAISSIndexBuilder…")
     builder = FAISSIndexBuilder(
         index_path=Path(args.out),
-        metadata_path=Path(args.meta),
+        mapping_path=Path(args.meta),
     )
 
     logger.info("Building from image directory: %s", args.images)
