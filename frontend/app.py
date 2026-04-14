@@ -46,41 +46,18 @@ if uploaded_file is not None:
     st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
     
     if st.button("Get Recommendations"):
-        # Convert image to Base64 encoding
-        base64_str = base64.b64encode(uploaded_file.getvalue()).decode("utf-8")
-        
-        # Strip "data:image/...;base64," prefix if it exists
-        if ";base64," in base64_str:
-            base64_str = base64_str.split(";base64,")[-1]
-            
-        payload = {"image": base64_str}
-        
         st.divider()
         
         with st.spinner("Analyzing outfit and finding matches..."):
             try:
                 # 1. Update API Endpoint
-                # Ensure requests are sent to http://localhost:8000/search via POST
-                response = requests.post("http://localhost:8000/search", json=payload)
+                # Endpoint is /api/v1/recommend, and uses multipart/form-data
+                files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+                response = requests.post("http://localhost:8000/api/v1/recommend", files=files)
                 response.raise_for_status()
                 data = response.json()
-            except Exception:
-                st.warning("Backend is currently unreachable. Switching to mock test data.")
-                
-                # Mock API response works perfectly for local testing
-                data = {
-                    "processing_time_ms": 210.3,
-                    "results": [
-                        {
-                            "image_id": "test_local_01",
-                            "similarity_score": 0.91,
-                            "brand": "Defacto",
-                            "price_egp": 650.00,
-                            "product_url": "https://www.defacto.com/eg-en/example",
-                            "store_location": "City Stars",
-                            "availability_egypt": True
-                        }
-                    ]
-                }
+            except Exception as e:
+                st.error(f"Backend is currently unreachable or returned an error: {e}")
+                data = {}
                 
             render_results(data)

@@ -13,7 +13,20 @@ from PIL import Image
 # ─── LOCAL AI PIPELINE ───
 from ai_engine.embeddings.encoder import get_encoder
 from ai_engine.embeddings.vector_store import FAISSVectorStore
-from api.models.schemas import RecommendationResponse, RecommendedItem
+
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
+
+class RecommendedItem(BaseModel):
+    id: str
+    category: str
+    image_url: str
+    price: Optional[Any] = "N/A"
+    brand: Optional[str] = "ChicFinder Local"
+
+class RecommendationResponse(BaseModel):
+    query_item: Dict[str, Any]
+    recommendations: List[RecommendedItem]
 
 # Force CPU mode to avoid the VRAM crash during local testing
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
