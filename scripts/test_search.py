@@ -20,7 +20,7 @@ with open("data/index_to_image_id.json", "r", encoding="utf-8") as f:
 
 # 2. Get a vector for the test image
 encoder = get_encoder()
-with open("test_shirt.jpg", "rb") as f:
+with open("uploads/test_shirt.jpg", "rb") as f:
     query_vector = encoder.encode(f.read())
 
 # 3. Search for matches (Asking for 15 so we have enough leftovers after filtering)
