@@ -14,6 +14,9 @@ router = APIRouter()
 
 class SearchRequest(BaseModel):
     image_base64: str
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    brands: Optional[List[str]] = None
 
 class SearchResultItem(BaseModel):
     image_id: str
@@ -62,11 +65,15 @@ def search_endpoint(request: SearchRequest, fastapi_req: Request):
         raise HTTPException(status_code=400, detail=f"Base64 Error: {str(e)}")
 
     try:
-        search_results = search_similar_items(image_bytes, top_k=15)
+        # Increase top_k to allow enough items after filtering
+        search_results = search_similar_items(image_bytes, top_k=50)
         
         response_items = []
         seen_product_ids = set()
         desired_results = 5
+        
+        # Prepare filters
+        brands_filter = [b.strip().lower() for b in request.brands] if request.brands else []
 
         for item in search_results:
             if len(response_items) >= desired_results:
@@ -78,20 +85,36 @@ def search_endpoint(request: SearchRequest, fastapi_req: Request):
             
             if clean_id in metadata:
                 meta_item = metadata[clean_id]
+                
+                # Filter by brand
+                if brands_filter:
+                    item_brand = meta_item.get('brand', '')
+                    if not item_brand or item_brand.strip().lower() not in brands_filter:
+                        continue
+                        
+                # Filter by price
+                try:
+                    raw_price = meta_item.get('price')
+                    price_val = float(raw_price) if raw_price else None
+                except (ValueError, TypeError):
+                    price_val = None
+                    
+                if request.min_price is not None or request.max_price is not None:
+                    if price_val is None:
+                        continue
+                    if request.min_price is not None and price_val < request.min_price:
+                        continue
+                    if request.max_price is not None and price_val > request.max_price:
+                        continue
+                        
                 product_id = meta_item.get('product_id', clean_id)
                 
                 if product_id not in seen_product_ids:
                     seen_product_ids.add(product_id)
                     
-                    try:
-                        raw_price = meta_item.get('price')
-                        price_val = float(raw_price) if raw_price else None
-                    except (ValueError, TypeError):
-                        price_val = None
-
                     response_items.append(
                         SearchResultItem(
-                            image_id=str(product_id),
+                            image_id=clean_id,
                             similarity_score=similarity_score,
                             brand=meta_item.get('brand'),
                             title=meta_item.get('title'),
@@ -101,6 +124,10 @@ def search_endpoint(request: SearchRequest, fastapi_req: Request):
                         )
                     )
             else:
+                # If no metadata exists, we drop it from search results if filters are applied
+                if brands_filter or request.min_price is not None or request.max_price is not None:
+                    continue
+                    
                 if clean_id not in seen_product_ids:
                     seen_product_ids.add(clean_id)
                     response_items.append(
