@@ -1,25 +1,16 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, HttpUrl
-from typing import List, Optional
 import base64
 import time
-import json
 import os
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, HttpUrl
 
+# Import the standalone function from your vector store
 from ai_engine.embeddings.vector_store import search_similar_items
 
 router = APIRouter()
 
-# --- LOAD METADATA GLOBALLY ---
-# We load this outside the function so it stays in memory and doesn't 
-# read the file from scratch on every single user request!
-METADATA_PATH = os.path.join("data", "metadata.json")
-try:
-    with open(METADATA_PATH, "r", encoding="utf-8") as f:
-        metadata = json.load(f)
-except FileNotFoundError:
-    print("Warning: metadata.json not found. API will return missing details.")
-    metadata = {}
+# --- SCHEMAS ---
 
 class SearchRequest(BaseModel):
     image_base64: str
@@ -28,34 +19,51 @@ class SearchResultItem(BaseModel):
     image_id: str
     similarity_score: float
     brand: Optional[str] = None
-    title: Optional[str] = None # Added title to match our data
+    title: Optional[str] = None
     price_egp: Optional[float] = None
-    product_url: Optional[HttpUrl] = None
-    store_location: Optional[str] = None
-    availability_egypt: bool = True # Defaulting to True for our local brands
+    product_url: Optional[str] = None # Using str for flexibility
+    availability_egypt: bool = True
 
 class SearchResponse(BaseModel):
     results: List[SearchResultItem]
     processing_time_ms: float
 
+# --- ENDPOINT ---
+
 @router.post("/search", response_model=SearchResponse)
-def search_endpoint(request: SearchRequest):
+def search_endpoint(request: SearchRequest, fastapi_req: Request):
     start_time = time.time()
-    try:
-        # 1. Decode Base64
-        b64_data = request.image_base64
-        if "base64," in b64_data:
-            b64_data = b64_data.split("base64,")
-            
-        image_bytes = base64.b64decode(b64_data)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Invalid base64 encoding")
+    metadata = getattr(fastapi_req.app.state, "metadata", {})
 
     try:
-        # 2. Search FAISS index (Ask for 15 to allow for deduplication)
+        # 1. Clean the string (removes hidden newlines or spaces from copy-pasting)
+        b64_data = request.image_base64.strip()
+        
+        # 2. Remove the header if it exists ("data:image/jpeg;base64,")
+        if "base64," in b64_data:
+            b64_data = b64_data.split("base64,")[1]
+            
+        # 3. Fix missing padding (Python requires the length to be a multiple of 4)
+        missing_padding = len(b64_data) % 4
+        if missing_padding:
+            b64_data += '=' * (4 - missing_padding)
+        
+        # --- ADD THESE TWO LINES ---
+        print(f"\n---> TYPE OF b64_data: {type(b64_data)}")
+        print(f"---> PREVIEW: {str(b64_data)[:100]}\n")
+        # ---------------------------
+            
+        # 4. Decode
+        image_bytes = base64.b64decode(b64_data)
+        
+    except Exception as e:
+        # If it fails now, it will print the REAL reason!
+        print(f"\n--- BASE64 CRASH REASON: {str(e)} ---\n")
+        raise HTTPException(status_code=400, detail=f"Base64 Error: {str(e)}")
+
+    try:
         search_results = search_similar_items(image_bytes, top_k=15)
         
-        # 3. Map results to schema WITH Deduplication
         response_items = []
         seen_product_ids = set()
         desired_results = 5
@@ -64,35 +72,41 @@ def search_endpoint(request: SearchRequest):
             if len(response_items) >= desired_results:
                 break
                 
-            raw_id = str(item.get("image_id", ""))
+            raw_id = str(item.get("id", ""))
             clean_id = raw_id.replace(".jpg", "")
+            similarity_score = float(item.get("score", 0.0))
             
-            # Look up the rich data
             if clean_id in metadata:
                 meta_item = metadata[clean_id]
-                product_id = meta_item.get('product_id', raw_id)
+                product_id = meta_item.get('product_id', clean_id)
                 
-                # --- DEDUPLICATION FILTER ---
                 if product_id not in seen_product_ids:
                     seen_product_ids.add(product_id)
                     
-                    # Ensure price is a float if it exists, otherwise None
-                    raw_price = meta_item.get('price')
                     try:
+                        raw_price = meta_item.get('price')
                         price_val = float(raw_price) if raw_price else None
-                    except ValueError:
+                    except (ValueError, TypeError):
                         price_val = None
 
-                    # Append the fully populated model
                     response_items.append(
                         SearchResultItem(
                             image_id=str(product_id),
-                            similarity_score=float(item.get("similarity_score", 0.0)),
+                            similarity_score=similarity_score,
                             brand=meta_item.get('brand'),
                             title=meta_item.get('title'),
                             price_egp=price_val,
                             product_url=meta_item.get('product_url'),
                             availability_egypt=True
+                        )
+                    )
+            else:
+                if clean_id not in seen_product_ids:
+                    seen_product_ids.add(clean_id)
+                    response_items.append(
+                        SearchResultItem(
+                            image_id=clean_id,
+                            similarity_score=similarity_score
                         )
                     )
         
@@ -102,5 +116,7 @@ def search_endpoint(request: SearchRequest):
             results=response_items,
             processing_time_ms=processing_time_ms
         )
+
     except Exception as e:
+        print(f"Search Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
