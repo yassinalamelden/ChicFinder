@@ -1,5 +1,7 @@
 import streamlit as st
-from frontend.pages import upload_page, results_page
+import requests
+import base64
+from results_gallery import render_results
 
 st.set_page_config(
     page_title="ChicFinder - Outfit Recommendation Expert",
@@ -29,17 +31,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Application Navigation
-if "page" not in st.session_state:
-    st.session_state["page"] = "upload"
-
 st.sidebar.title("ChicFinder 👗")
 st.sidebar.write("Get outfit recommendations based on the **OutfitAI** research paper.")
 
-if st.session_state["page"] == "upload":
-    upload_page.show()
-elif st.session_state["page"] == "results":
-    results_page.show()
-
 st.sidebar.divider()
 st.sidebar.info("Powered by FastAPI, Streamlit, and GPT-4o.")
+
+st.title("Upload Your Outfit")
+st.write("Upload a photo of your outfit to get personalized recommendations.")
+
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+if uploaded_file is not None:
+    st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
+    
+    if st.button("Get Recommendations"):
+        st.divider()
+        
+        with st.spinner("Analyzing outfit and finding matches..."):
+            try:
+                # 1. Update API Endpoint
+                # Endpoint is /api/v1/recommend, and uses multipart/form-data
+                files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+                response = requests.post("http://localhost:8000/api/v1/recommend", files=files)
+                response.raise_for_status()
+                data = response.json()
+            except Exception as e:
+                st.error(f"Backend is currently unreachable or returned an error: {e}")
+                data = {}
+                
+            render_results(data)

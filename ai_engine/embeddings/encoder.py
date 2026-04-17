@@ -36,7 +36,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-
 CLIP_MODEL_ID = "patrickjohncyh/fashion-clip"
 DEFAULT_LOCAL_CLIP_PATH = "models/fine_tuned_clip"
 EMBEDDING_DIM = 512  # fixed — agreed contract across all slices
