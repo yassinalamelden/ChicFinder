@@ -227,7 +227,7 @@ class FAISSVectorStore:
 # ---------------------------------------------------------------------------
 
 
-def search_similar_items(image_bytes: bytes) -> list[dict]:
+def search_similar_items(image_bytes: bytes, top_k: int = 5) -> list[dict]:
     """
     Agreed Slice 1 → Slice 2 drop-in replacement.
 
@@ -248,4 +248,4 @@ def search_similar_items(image_bytes: bytes) -> list[dict]:
     results = search_similar_items(image_bytes)
     # [{"id": "42", "image_url": "...", "score": 0.91}, ...]
     """
-    return FAISSVectorStore.get_instance().search(image_bytes)
+    return FAISSVectorStore.get_instance().search(image_bytes, top_k=top_k)
