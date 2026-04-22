@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import recommend, health
+from api.routes import recommend, health, search
 from api.middleware.logging import LoggingMiddleware
 from chic_finder.config import settings
 
@@ -56,28 +56,22 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.error("Unexpected error pre-warming FAISSVectorStore: %s", exc)
 
-    # Load products.json
-    app.state.products = []
-    app.state.products_lookup = {}
-    products_path = Path("products.json")
-    if products_path.exists():
+    # ---------------------------------------------------------
+    # FIX: Load our real Barawy metadata instead of products.json
+    # ---------------------------------------------------------
+    app.state.metadata = {}
+    metadata_path = Path("data/metadata.json")
+    if metadata_path.exists():
         try:
-            with open(products_path) as f:
-                products = json.load(f)
-                app.state.products = products
-                # Build lookup by ID (padded to match FAISS index logic if needed)
-                # Strategy B: key by id or filename. products.json has id: "001"
-                app.state.products_lookup = {
-                    p.get("id"): p for p in products if p.get("id")
-                }
-                logger.info("Loaded %d products from products.json", len(products))
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                app.state.metadata = json.load(f)
+                logger.info("Loaded %d products from data/metadata.json", len(app.state.metadata))
         except Exception as exc:
-            logger.error("Failed to load products.json: %s", exc)
+            logger.error("Failed to load metadata.json: %s", exc)
     else:
-        logger.warning("products.json not found at project root")
+        logger.warning("data/metadata.json not found!")
 
     yield  # application runs here
-
 
 # ---------------------------------------------------------------------------
 # Application
@@ -100,6 +94,7 @@ app.add_middleware(LoggingMiddleware)
 # Routers
 app.include_router(recommend.router, prefix=settings.API_V1_STR, tags=["recommendation"])
 app.include_router(health.router,    prefix=settings.API_V1_STR, tags=["health"])
+app.include_router(search.router,    prefix=settings.API_V1_STR, tags=["search"])
 
 # ---------------------------------------------------------------------------
 # Ensure required directories exist (must happen BEFORE app.mount calls)
