@@ -16,9 +16,9 @@ class Config:
     PROJECT_NAME: str = "ChicFinder"
     APP_ENV: str = field(default_factory=lambda: os.getenv("APP_ENV", "development"))
     
-    # OpenAI Settings
-    OPENAI_API_KEY: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
-    GPT_MODEL: str = "gpt-4o"
+    # AI Model Settings
+    GEMINI_API_KEY: str = field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
+    GEMINI_MODEL: str = "gemini-2.5-flash" #
     
     # AI Engine Settings
     MARQO_URL: str = field(default_factory=lambda: os.getenv("MARQO_URL", "http://localhost:8882"))

@@ -3,7 +3,7 @@ ai_engine/embeddings/vector_store.py
 ======================================
 Slice 2 — Yassin (branch: ai/yassin)
 
-FAISSVectorStore: loads the pre-built index + metadata and serves
+FAISSVectorStore: loads the pre-built index + id mapping and serves
 similarity search queries at runtime.
 
 Drop-in replacement for Slice 1 dummy search service.
@@ -20,6 +20,7 @@ from typing import Optional
 
 import numpy as np
 
+from ai_engine.embeddings.database_builder import DEFAULT_IMAGES_DIR
 from ai_engine.embeddings.encoder import get_encoder
 
 logger = logging.getLogger(__name__)
@@ -28,20 +29,21 @@ logger = logging.getLogger(__name__)
 # Default paths
 # ---------------------------------------------------------------------------
 
-DEFAULT_INDEX_PATH    = Path("data/embeddings.index")
-DEFAULT_METADATA_PATH = Path("data/metadata.json")
-DEFAULT_TOP_K         = 5
+DEFAULT_INDEX_PATH = Path("data/embeddings.index")
+DEFAULT_MAPPING_PATH = Path("data/index_to_image_id.json")
+DEFAULT_TOP_K = 5
 
 
 # ---------------------------------------------------------------------------
 # FAISSVectorStore  (Singleton)
 # ---------------------------------------------------------------------------
 
+
 class FAISSVectorStore:
     """
     Singleton FAISS search service.
 
-    Loads the pre-built index + metadata once at startup, then serves
+    Loads the pre-built index + id mapping once at startup, then serves
     fast cosine-similarity queries against the fashion image database.
 
     Usage
@@ -55,14 +57,14 @@ class FAISSVectorStore:
 
     def __init__(
         self,
-        index_path:    Path = DEFAULT_INDEX_PATH,
-        metadata_path: Path = DEFAULT_METADATA_PATH,
+        index_path: Path = DEFAULT_INDEX_PATH,
+        metadata_path: Path = DEFAULT_MAPPING_PATH,
     ) -> None:
         import faiss
 
-        self._encoder  = get_encoder()   # singleton FashionCLIPEncoder
+        self._encoder = get_encoder()  # singleton FashionCLIPEncoder
 
-        index_path    = Path(index_path)
+        index_path = Path(index_path)
         metadata_path = Path(metadata_path)
 
         # Validate files exist before loading
@@ -73,7 +75,7 @@ class FAISSVectorStore:
             )
         if not metadata_path.exists():
             raise FileNotFoundError(
-                f"Metadata not found at {metadata_path}. "
+                f"Index mapping not found at {metadata_path}. "
                 "Run scripts/02_build_faiss_index.py first."
             )
 
@@ -83,9 +85,7 @@ class FAISSVectorStore:
         with open(metadata_path) as f:
             self._metadata: dict = json.load(f)
 
-        logger.info(
-            "FAISSVectorStore ready | vectors=%d", self._index.ntotal
-        )
+        logger.info("FAISSVectorStore ready | vectors=%d", self._index.ntotal)
 
     # ------------------------------------------------------------------
     # Singleton
@@ -132,15 +132,25 @@ class FAISSVectorStore:
         # 3. Build results from metadata
         results = []
         for score, idx in zip(scores[0], indices[0]):
-            if idx == -1:           # FAISS returns -1 for empty slots
+            if idx == -1:  # FAISS returns -1 for empty slots
                 continue
             meta = self._metadata.get(str(idx), {})
-            results.append({
-                "id":        meta.get("id", str(idx)),
-                "image_url": meta.get("image_url", ""),
-                "filename":  meta.get("filename", ""),
-                "score":     float(score),   # cosine similarity ∈ [-1, 1]
-            })
+            if isinstance(meta, str):
+                filename = meta
+                item_id = Path(filename).stem
+                image_url = str(DEFAULT_IMAGES_DIR / filename)
+            else:
+                filename = meta.get("filename", "")
+                item_id = meta.get("id", str(idx))
+                image_url = meta.get("image_url", "")
+            results.append(
+                {
+                    "id": item_id,
+                    "image_url": image_url,
+                    "filename": filename,
+                    "score": float(score),  # cosine similarity in [-1, 1]
+                }
+            )
 
         return results
 
@@ -174,19 +184,34 @@ class FAISSVectorStore:
             if idx == -1:
                 continue
             meta = self._metadata.get(str(idx), {})
-            results.append({
-                "_id":       meta.get("id", str(idx)),
-                "id":        meta.get("id", str(idx)),
-                "image_url": meta.get("image_url", ""),
-                "filename":  meta.get("filename", ""),
-                "category":  meta.get("category", "N/A"),
-                "sub_category": meta.get("sub_category", "N/A"),
-                "color":     meta.get("color", "N/A"),
-                "style":     meta.get("style", "N/A"),
-                "brand":     meta.get("brand"),
-                "price":     meta.get("price"),
-                "score":     float(score),
-            })
+            if isinstance(meta, str):
+                filename = meta
+                item_id = Path(filename).stem
+                payload = {
+                    "_id": item_id,
+                    "id": item_id,
+                    "image_url": str(DEFAULT_IMAGES_DIR / filename),
+                    "filename": filename,
+                }
+            else:
+                payload = {
+                    "_id": meta.get("id", str(idx)),
+                    "id": meta.get("id", str(idx)),
+                    "image_url": meta.get("image_url", ""),
+                    "filename": meta.get("filename", ""),
+                    "category": meta.get("category", "N/A"),
+                    "sub_category": meta.get("sub_category", "N/A"),
+                    "color": meta.get("color", "N/A"),
+                    "style": meta.get("style", "N/A"),
+                    "brand": meta.get("brand"),
+                    "price": meta.get("price"),
+                }
+            results.append(
+                {
+                    **payload,
+                    "score": float(score),
+                }
+            )
 
         return results
 
@@ -201,7 +226,8 @@ class FAISSVectorStore:
 # (called from api/routers/search.py via services/search_service.py)
 # ---------------------------------------------------------------------------
 
-def search_similar_items(image_bytes: bytes) -> list[dict]:
+
+def search_similar_items(image_bytes: bytes, top_k: int = 5) -> list[dict]:
     """
     Agreed Slice 1 → Slice 2 drop-in replacement.
 
@@ -222,4 +248,4 @@ def search_similar_items(image_bytes: bytes) -> list[dict]:
     results = search_similar_items(image_bytes)
     # [{"id": "42", "image_url": "...", "score": 0.91}, ...]
     """
-    return FAISSVectorStore.get_instance().search(image_bytes)
+    return FAISSVectorStore.get_instance().search(image_bytes, top_k=top_k)
