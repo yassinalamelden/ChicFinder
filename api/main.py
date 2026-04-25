@@ -8,12 +8,16 @@ from contextlib import asynccontextmanager
 import json
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from the .env file
+load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import recommend, health, stores
+from api.routes import recommend, health, stores, search
 from api.middleware.logging import LoggingMiddleware
 from chic_finder.config import settings
 
@@ -42,7 +46,7 @@ async def lifespan(app: FastAPI):
     # except Exception as exc:
     #     logger.error("Unexpected error pre-warming FAISSVectorStore: %s", exc)
 
-    # Load products.json
+    # Load products.json (used by /stores routes)
     app.state.products = []
     app.state.products_lookup = {}
     products_path = Path(__file__).parent.parent / "products.json"
@@ -57,6 +61,19 @@ async def lifespan(app: FastAPI):
             logger.error("Failed to load products.json: %s", exc)
     else:
         logger.warning("products.json not found at project root")
+
+    # Load data/metadata.json (used by /search route)
+    app.state.metadata = {}
+    metadata_path = Path("data/metadata.json")
+    if metadata_path.exists():
+        try:
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                app.state.metadata = json.load(f)
+                logger.info("Loaded %d products from data/metadata.json", len(app.state.metadata))
+        except Exception as exc:
+            logger.error("Failed to load metadata.json: %s", exc)
+    else:
+        logger.warning("data/metadata.json not found — /search will return empty results until built.")
 
     # Load stores.json
     app.state.stores = []
@@ -75,7 +92,6 @@ async def lifespan(app: FastAPI):
         logger.warning("stores.json not found at project root")
 
     yield  # application runs here
-
 
 # ---------------------------------------------------------------------------
 # Application
@@ -98,6 +114,7 @@ app.add_middleware(LoggingMiddleware)
 app.include_router(recommend.router, prefix=settings.API_V1_STR, tags=["recommendation"])
 app.include_router(health.router,    prefix=settings.API_V1_STR, tags=["health"])
 app.include_router(stores.router,    prefix=settings.API_V1_STR, tags=["stores"])
+app.include_router(search.router,    prefix=settings.API_V1_STR, tags=["search"])
 
 # ---------------------------------------------------------------------------
 # Static file mounts (directories must exist before mounting)

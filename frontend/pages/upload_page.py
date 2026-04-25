@@ -1,5 +1,5 @@
 import streamlit as st
-from frontend.utils.api_client import APIClient
+from utils.api_client import APIClient
 
 def show():
     """file uploader + trigger button for outfit recommendations."""
