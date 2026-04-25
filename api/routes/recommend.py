@@ -44,8 +44,13 @@ router = APIRouter()
 UPLOADS_DIR = Path("uploads")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
-# Initialize local vector store globally
-vector_store = FAISSVectorStore.get_instance()
+# Initialize local vector store globally (None if index not built yet)
+try:
+    vector_store = FAISSVectorStore.get_instance()
+except Exception as _faiss_err:
+    import logging as _logging
+    _logging.getLogger(__name__).warning("FAISS unavailable — /recommend will return 503 until index is built. %s", _faiss_err)
+    vector_store = None
 
 def _ensure_uploads_dir() -> None:
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -120,8 +125,11 @@ async def get_recommendations(file: UploadFile = File(...)):
     '''
 
     # ─── 2. LOCAL FASHIONCLIP + FAISS SEARCH ───
+    if vector_store is None:
+        raise HTTPException(status_code=503, detail="FAISS index not built yet. Run scripts/02_build_faiss_index.py first.")
+
     try:
-        print("🚀 Running Local FashionCLIP Pipeline...")
+        print("Running Local FashionCLIP Pipeline...")
         encoder = get_encoder()
 
         raw_vector = encoder._encode(img)

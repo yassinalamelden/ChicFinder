@@ -28,7 +28,18 @@ scrapers/
 .DS_Store
 .vscode/
 .idea/
-node_modules
+node_modules/
+**/node_modules/
+
+# Build / cache
+dist/
+build/
+.next/
+.vite/
+**/.vite/
+
+# Lock files (optional: remove if you want to track them)
+# package-lock.json
 
 # Agent / local operating files
 LOCAL_OPERATING_SUMMARY.md

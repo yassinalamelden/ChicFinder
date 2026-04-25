@@ -16,7 +16,7 @@ pip install -r requirements.txt
 
 2. **Frontend dependencies** (one-time):
 ```bash
-cd website_fullstack
+cd FrontEnd
 npm install
 cd ..
 ```
@@ -47,7 +47,7 @@ python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 
 **Terminal 2 - Frontend (Next.js on port 3000):**
 ```bash
-cd website_fullstack
+cd FrontEnd
 npm run dev
 ```
 
@@ -69,12 +69,12 @@ npm run dev
 - Backend: **8000** (configured in `api.main:app`)
 
 To change ports, modify:
-- Frontend port: `website_fullstack/next.config.js` → `server.port`
+- Frontend port: `FrontEnd/next.config.js` → `server.port`
 - Backend port: Use `--port` flag when starting uvicorn
 
 ### Environment Variables
 
-Create `website_fullstack/.env.local` with:
+Create `FrontEnd/.env.local` with:
 
 ```env
 # Backend API (required for frontend)
@@ -86,7 +86,7 @@ NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
 # ... other Firebase config
 ```
 
-See `website_fullstack/.env.example` for all required variables.
+See `FrontEnd/.env.example` for all required variables.
 
 ## Troubleshooting
 
@@ -113,7 +113,7 @@ If frontend shows "Failed to connect to backend":
 ### Module Not Found Errors
 ```bash
 # Clear cache and reinstall
-cd website_fullstack
+cd FrontEnd
 rm -rf node_modules .next
 npm install
 npm run dev
@@ -130,7 +130,7 @@ npm run dev
 
 ```bash
 # Build frontend
-cd website_fullstack
+cd FrontEnd
 npm run build
 npm run start  # Runs on port 3000
 
