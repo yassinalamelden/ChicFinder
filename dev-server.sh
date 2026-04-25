@@ -33,7 +33,7 @@ sleep 2
 
 # Start Next.js frontend
 echo "Starting Next.js frontend (port 3000)..."
-cd website_fullstack
+cd FrontEnd
 npm run dev &
 FRONTEND_PID=$!
 
