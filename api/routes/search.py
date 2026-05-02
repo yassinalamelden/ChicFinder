@@ -1,19 +1,28 @@
 import base64
 import time
 import os
+import io
+import logging
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, HttpUrl
+from fastapi import APIRouter, HTTPException, Request, Depends
+from pydantic import BaseModel, HttpUrl, Field
+from PIL import Image
 
 # Import the standalone function from your vector store
 from ai_engine.embeddings.vector_store import search_similar_items
+from api.dependencies.auth import require_auth
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# --- CONSTANTS ---
+MAX_IMAGE_B64_BYTES = 10 * 1024 * 1024  # 10 MB decoded limit
+ALLOWED_IMAGE_FORMATS = ("JPEG", "PNG", "WEBP", "GIF")
 
 # --- SCHEMAS ---
 
 class SearchRequest(BaseModel):
-    image_base64: str
+    image_base64: str = Field(..., max_length=MAX_IMAGE_B64_BYTES * 4 // 3 + 100)
     min_price: Optional[float] = None
     max_price: Optional[float] = None
     brands: Optional[List[str]] = None
@@ -24,7 +33,8 @@ class SearchResultItem(BaseModel):
     brand: Optional[str] = None
     title: Optional[str] = None
     price_egp: Optional[float] = None
-    product_url: Optional[str] = None # Using str for flexibility
+    product_url: Optional[str] = None
+    image_url: Optional[str] = None
     availability_egypt: bool = True
 
 class SearchResponse(BaseModel):
@@ -34,35 +44,47 @@ class SearchResponse(BaseModel):
 # --- ENDPOINT ---
 
 @router.post("/search", response_model=SearchResponse)
-def search_endpoint(request: SearchRequest, fastapi_req: Request):
+def search_endpoint(
+    request: SearchRequest,
+    fastapi_req: Request,
+    _user: dict = Depends(require_auth),
+):
     start_time = time.time()
     metadata = getattr(fastapi_req.app.state, "metadata", {})
 
     try:
         # 1. Clean the string (removes hidden newlines or spaces from copy-pasting)
         b64_data = request.image_base64.strip()
-        
+
         # 2. Remove the header if it exists ("data:image/jpeg;base64,")
         if "base64," in b64_data:
             b64_data = b64_data.split("base64,")[1]
-            
+
         # 3. Fix missing padding (Python requires the length to be a multiple of 4)
         missing_padding = len(b64_data) % 4
         if missing_padding:
             b64_data += '=' * (4 - missing_padding)
-        
-        # --- ADD THESE TWO LINES ---
-        print(f"\n---> TYPE OF b64_data: {type(b64_data)}")
-        print(f"---> PREVIEW: {str(b64_data)[:100]}\n")
-        # ---------------------------
-            
+
         # 4. Decode
         image_bytes = base64.b64decode(b64_data)
-        
+
+        # 5. Validate image format before passing to FAISS
+        try:
+            img = Image.open(io.BytesIO(image_bytes))
+            if img.format not in ALLOWED_IMAGE_FORMATS:
+                raise HTTPException(status_code=400, detail="Unsupported image format. Supported: JPEG, PNG, WEBP, GIF")
+            img.verify()
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning("Image validation failed: %s", str(e))
+            raise HTTPException(status_code=400, detail="Invalid image data")
+
+    except HTTPException:
+        raise
     except Exception as e:
-        # If it fails now, it will print the REAL reason!
-        print(f"\n--- BASE64 CRASH REASON: {str(e)} ---\n")
-        raise HTTPException(status_code=400, detail=f"Base64 Error: {str(e)}")
+        logger.error("Base64 decode failed: %s", str(e))
+        raise HTTPException(status_code=400, detail="Invalid image format")
 
     try:
         # Increase top_k to allow enough items after filtering
@@ -111,7 +133,10 @@ def search_endpoint(request: SearchRequest, fastapi_req: Request):
                 
                 if product_id not in seen_product_ids:
                     seen_product_ids.add(product_id)
-                    
+
+                    image_urls = meta_item.get('image_urls', [])
+                    image_url = image_urls[0] if image_urls else f"/images/{clean_id}.jpg"
+
                     response_items.append(
                         SearchResultItem(
                             image_id=clean_id,
@@ -120,6 +145,7 @@ def search_endpoint(request: SearchRequest, fastapi_req: Request):
                             title=meta_item.get('title'),
                             price_egp=price_val,
                             product_url=meta_item.get('product_url'),
+                            image_url=image_url,
                             availability_egypt=True
                         )
                     )
@@ -138,12 +164,14 @@ def search_endpoint(request: SearchRequest, fastapi_req: Request):
                     )
         
         processing_time_ms = (time.time() - start_time) * 1000
-        
+
         return SearchResponse(
             results=response_items,
             processing_time_ms=processing_time_ms
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Search Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Search endpoint error", exc_info=True)
+        raise HTTPException(status_code=500, detail="Search failed. Please try again.")

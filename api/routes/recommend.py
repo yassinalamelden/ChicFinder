@@ -1,9 +1,12 @@
 import uuid
 import os
 import io
+import logging
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 # ─── FUTURE DEVELOPMENT: OpenAI RAG Pipeline ───
 # Uncomment these when OpenAI credits are restored
@@ -62,7 +65,8 @@ async def get_recommendations(file: UploadFile = File(...)):
         clean_bytes = save_path.read_bytes()
         query_url = f"/uploads/{saved_filename}"
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Corrupted image format. Error: {e}")
+        logger.error("Image sanitization failed: %s", str(e))
+        raise HTTPException(status_code=400, detail="Invalid image format")
         
     # ─────────────────────────────────────────────
     # ─── FUTURE DEVELOPMENT: OPENAI PIPELINE ───
@@ -130,5 +134,5 @@ async def get_recommendations(file: UploadFile = File(...)):
         }
         
     except Exception as local_e:
-        print(f"CRITICAL LOCAL ERROR: {local_e}")
-        raise HTTPException(status_code=500, detail=f"Local Engine Crash: {local_e}")
+        logger.error("Recommendation engine failed", exc_info=True)
+        raise HTTPException(status_code=500, detail="Recommendation failed. Please try again.")
