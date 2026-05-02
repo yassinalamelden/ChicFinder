@@ -8,6 +8,12 @@ venv/
 env/
 .venv/
 .env
+.env.local
+.env.*.local
+*.env.local
+FrontEnd/.env.local
+FrontEnd/.env.production
+website_fullstack/.env.local
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -27,3 +33,14 @@ data/
 .DS_Store
 .vscode/
 .idea/
+
+# Next.js (FrontEnd/)
+FrontEnd/.next/
+FrontEnd/out/
+FrontEnd/node_modules/
+FrontEnd/.vercel
+FrontEnd/next-env.d.ts
+FrontEnd/*.tsbuildinfo
+FrontEnd/coverage/
+FrontEnd/build/
+FrontEnd/dist/

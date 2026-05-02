@@ -13,6 +13,7 @@ Changes vs original:
 from contextlib import asynccontextmanager
 import json
 import logging
+import os
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -24,7 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import recommend, health, search
+from api.routes import recommend, health, search, stores
 from api.middleware.logging import LoggingMiddleware
 from chic_finder.config import settings
 
@@ -79,13 +80,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-# CORS
+# CORS — restrict origins to configured frontend URLs
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Custom logging middleware
@@ -95,6 +97,7 @@ app.add_middleware(LoggingMiddleware)
 app.include_router(recommend.router, prefix=settings.API_V1_STR, tags=["recommendation"])
 app.include_router(health.router,    prefix=settings.API_V1_STR, tags=["health"])
 app.include_router(search.router,    prefix=settings.API_V1_STR, tags=["search"])
+app.include_router(stores.router,    prefix=settings.API_V1_STR, tags=["stores"])
 
 # ---------------------------------------------------------------------------
 # Ensure required directories exist (must happen BEFORE app.mount calls)
