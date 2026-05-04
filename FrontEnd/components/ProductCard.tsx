@@ -12,12 +12,13 @@ import { safeExternalUrl } from "@/lib/utils";
 
 interface ProductCardProps {
   result: ChicFinderResult;
+  onClick?: () => void;
 }
 
 const BUTTON_BASE_STYLE =
   "w-full inline-flex items-center justify-center h-10 px-4 py-2 rounded-md font-display tracking-widest text-base transition-colors";
 
-export function ProductCard({ result }: ProductCardProps) {
+export function ProductCard({ result, onClick }: ProductCardProps) {
   const {
     image_id,
     similarity_score,
@@ -33,7 +34,10 @@ export function ProductCard({ result }: ProductCardProps) {
   return (
     <Card className="bg-cf-card border-cf-border hover:-translate-y-1 transition-transform duration-200 overflow-hidden flex flex-col">
       {/* Product image */}
-      <div className="relative h-48 bg-zinc-900 overflow-hidden">
+      <div
+        className={`relative h-48 bg-zinc-900 overflow-hidden ${onClick ? "cursor-pointer" : ""}`}
+        onClick={onClick}
+      >
         {result.image_url ? (
           <Image
             src={result.image_url}
