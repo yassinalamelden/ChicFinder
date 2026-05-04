@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/carousel";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import type { ChicFinderResult } from "@/types/api";
+import { ProductDetailModal, type ModalProduct } from "@/components/ProductDetailModal";
 
 interface ProductGalleryProps {
   results: ChicFinderResult[];
@@ -18,15 +19,31 @@ interface ProductGalleryProps {
   processingTimeMs?: number;
 }
 
-function ResultCard({ result }: { result: ChicFinderResult }) {
+function toModalProduct(result: ChicFinderResult): ModalProduct {
+  return {
+    title: result.title,
+    brand: result.brand,
+    price_egp: result.price_egp,
+    image_urls: result.image_urls ?? (result.image_url ? [result.image_url] : []),
+    description: result.description,
+    availability: result.availability,
+    product_url: result.product_url,
+  };
+}
+
+function ResultCard({
+  result,
+  onClick,
+}: {
+  result: ChicFinderResult;
+  onClick: () => void;
+}) {
   const pct = Math.round(result.similarity_score * 100);
 
   return (
-    <a
-      href={result.product_url ?? "#"}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group rounded-xl block"
+    <div
+      onClick={onClick}
+      className="group rounded-xl block cursor-pointer"
     >
       <div className="group relative h-full min-h-[27rem] max-w-full overflow-hidden rounded-xl md:aspect-[5/4] lg:aspect-[4/5]">
         {result.image_url ? (
@@ -65,7 +82,7 @@ function ResultCard({ result }: { result: ChicFinderResult }) {
           </div>
         </div>
       </div>
-    </a>
+    </div>
   );
 }
 
@@ -78,6 +95,7 @@ export function ProductGallery({
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedProduct, setSelectedProduct] = useState<ModalProduct | null>(null);
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -153,7 +171,10 @@ export function ProductGallery({
                 key={result.image_id}
                 className="max-w-[300px] pl-[20px] lg:max-w-[340px]"
               >
-                <ResultCard result={result} />
+                <ResultCard
+                  result={result}
+                  onClick={() => setSelectedProduct(toModalProduct(result))}
+                />
               </CarouselItem>
             ))}
           </CarouselContent>
@@ -173,6 +194,10 @@ export function ProductGallery({
           ))}
         </div>
       </div>
+      <ProductDetailModal
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
     </section>
   );
 }
