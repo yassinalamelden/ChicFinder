@@ -5,10 +5,14 @@ export interface ChicFinderResult {
   image_id: string;
   similarity_score: number;
   brand?: string;
+  title?: string;
   price_egp?: number;
   product_url?: string;
   store_location?: string;
   image_url?: string;
+  image_urls?: string[];
+  description?: string | null;
+  availability?: string;
   availability_egypt: boolean;
 }
 
@@ -40,14 +44,13 @@ export interface StoreItem {
   id: string;
   name: string;
   brand: string;
-  category: string;
-  type: string;
-  color: string;
+  category?: string;
+  type?: string;
   price_egp: number;
-  sizes: string[];
-  image_url?: string;
+  image_urls: string[];
   product_url?: string;
-  description?: string;
+  description?: string | null;
+  availability: string;
   store_id: string;
   store_location?: string;
 }
