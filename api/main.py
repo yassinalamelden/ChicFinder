@@ -72,6 +72,26 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("data/metadata.json not found!")
 
+    # Load barawy_raw.jsonl — richer metadata used by stores API and search enrichment
+    app.state.barawy_data = []
+    app.state.barawy_by_id = {}
+    barawy_path = Path("barawy_raw.jsonl")
+    if barawy_path.exists():
+        try:
+            records = []
+            with open(barawy_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        records.append(json.loads(line))
+            app.state.barawy_data = records
+            app.state.barawy_by_id = {r["id"]: r for r in records}
+            logger.info("Loaded %d products from barawy_raw.jsonl", len(records))
+        except Exception as exc:
+            logger.error("Failed to load barawy_raw.jsonl: %s", exc)
+    else:
+        logger.warning("barawy_raw.jsonl not found!")
+
     yield  # application runs here
 
 # ---------------------------------------------------------------------------
