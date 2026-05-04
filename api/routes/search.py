@@ -35,6 +35,9 @@ class SearchResultItem(BaseModel):
     price_egp: Optional[float] = None
     product_url: Optional[str] = None
     image_url: Optional[str] = None
+    image_urls: List[str] = []
+    description: Optional[str] = None
+    availability: str = "InStock"
     availability_egypt: bool = True
 
 class SearchResponse(BaseModel):
@@ -87,6 +90,8 @@ def search_endpoint(
         raise HTTPException(status_code=400, detail="Invalid image format")
 
     try:
+        barawy_by_id: dict = getattr(fastapi_req.app.state, "barawy_by_id", {})
+
         # Increase top_k to allow enough items after filtering
         search_results = search_similar_items(image_bytes, top_k=50)
         
@@ -130,23 +135,30 @@ def search_endpoint(
                         continue
                         
                 product_id = meta_item.get('product_id', clean_id)
-                
+
                 if product_id not in seen_product_ids:
                     seen_product_ids.add(product_id)
 
-                    image_urls = meta_item.get('image_urls', [])
-                    image_url = image_urls[0] if image_urls else f"/images/{clean_id}.jpg"
+                    # Derive barawy record: strip photo-index suffix (_0, _1, …)
+                    barawy_id = clean_id.rsplit("_", 1)[0] if "_" in clean_id else clean_id
+                    barawy_record = barawy_by_id.get(barawy_id, {})
+
+                    cdn_image_urls = barawy_record.get("image_urls", [])
+                    image_url = cdn_image_urls[0] if cdn_image_urls else f"/images/{clean_id}.jpg"
 
                     response_items.append(
                         SearchResultItem(
                             image_id=clean_id,
                             similarity_score=similarity_score,
-                            brand=meta_item.get('brand'),
-                            title=meta_item.get('title'),
+                            brand=meta_item.get("brand"),
+                            title=meta_item.get("title"),
                             price_egp=price_val,
-                            product_url=meta_item.get('product_url'),
+                            product_url=meta_item.get("product_url"),
                             image_url=image_url,
-                            availability_egypt=True
+                            image_urls=cdn_image_urls,
+                            description=barawy_record.get("description"),
+                            availability=barawy_record.get("availability", "InStock"),
+                            availability_egypt=True,
                         )
                     )
             else:
