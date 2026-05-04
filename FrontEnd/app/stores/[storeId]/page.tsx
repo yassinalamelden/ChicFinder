@@ -20,10 +20,13 @@ function storeItemToResult(item: StoreItem): ChicFinderResult {
     image_id: item.id,
     similarity_score: 1,
     brand: item.brand,
+    title: item.name,
     price_egp: item.price_egp,
     product_url: item.product_url,
     store_location: item.store_location,
-    image_url: item.image_url,
+    image_urls: item.image_urls,
+    description: item.description,
+    availability: item.availability,
     availability_egypt: true,
   };
 }
@@ -59,8 +62,7 @@ export default function StoreDetailPage() {
       list = list.filter(
         (i) =>
           i.name.toLowerCase().includes(q) ||
-          i.type.toLowerCase().includes(q) ||
-          i.color.toLowerCase().includes(q)
+          (i.type && i.type.toLowerCase().includes(q))
       );
     }
     return list;

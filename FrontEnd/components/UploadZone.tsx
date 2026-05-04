@@ -144,7 +144,7 @@ export function UploadZone({ onFileSelected, isLoading = false }: UploadZoneProp
 
           {/* Camera capture */}
           <button
-            onClick={openCamera}
+            onClick={() => openCamera()}
             className="flex-1 flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white py-3 px-5 transition-colors text-sm"
           >
             <Camera className="w-4 h-4" />
