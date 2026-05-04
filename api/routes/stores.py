@@ -22,16 +22,14 @@ class StoreItemResponse(BaseModel):
     id: str
     name: str
     brand: str
-    category: str
-    type: str
-    color: str
+    category: Optional[str] = None
+    type: Optional[str] = None
     price_egp: float
-    sizes: List[str]
-    image_url: Optional[str] = None
+    image_urls: List[str] = []
     product_url: Optional[str] = None
     description: Optional[str] = None
+    availability: str = "InStock"
     store_id: str
-    store_location: Optional[str] = None
 
 
 class StoreDetailResponse(BaseModel):
@@ -43,37 +41,35 @@ class StoreDetailResponse(BaseModel):
 # --- HELPERS ---
 
 def _slug(brand: str) -> str:
-    return brand.lower().replace(" ", "-")
+    return brand.lower().replace(" ", "-").replace("_", "-")
 
 
-def _brand_from_slug(slug: str, metadata: dict) -> Optional[str]:
-    for item in metadata.values():
-        brand = item.get("brand", "")
+def _brand_from_slug(slug: str, barawy_data: list) -> Optional[str]:
+    for record in barawy_data:
+        brand = record.get("brand", "")
         if brand and _slug(brand) == slug:
             return brand
     return None
 
 
-def _item_to_response(key: str, meta: dict, store_id: str) -> StoreItemResponse:
-    image_urls = meta.get("image_urls", [])
+def _item_to_response(record: dict, store_id: str) -> StoreItemResponse:
     return StoreItemResponse(
-        id=meta.get("product_id", key),
-        name=meta.get("title", ""),
-        brand=meta.get("brand", ""),
-        category=meta.get("category", ""),
-        type=meta.get("subcategory") or meta.get("category", ""),
-        color="",
-        price_egp=float(meta.get("price") or 0),
-        sizes=[],
-        image_url=image_urls[0] if image_urls else None,
-        product_url=meta.get("product_url"),
-        description=meta.get("description"),
+        id=record["id"],
+        name=record.get("name", ""),
+        brand=record.get("brand", ""),
+        category=record.get("category"),
+        type=record.get("subcategory") or record.get("category"),
+        price_egp=float(record.get("price") or 0),
+        image_urls=record.get("image_urls", []),
+        product_url=record.get("product_url"),
+        description=record.get("description"),
+        availability=record.get("availability", "InStock"),
         store_id=store_id,
     )
 
 
-def _build_store(brand: str, items: list[dict]) -> StoreResponse:
-    categories = sorted({i.get("category", "") for i in items if i.get("category")})
+def _build_store(brand: str, items: list) -> StoreResponse:
+    categories = sorted({r.get("category") for r in items if r.get("category")})
     return StoreResponse(
         id=_slug(brand),
         name=brand,
@@ -87,29 +83,24 @@ def _build_store(brand: str, items: list[dict]) -> StoreResponse:
 
 @router.get("/stores", response_model=List[StoreResponse])
 def list_stores(request: Request):
-    metadata: dict = getattr(request.app.state, "metadata", {})
-
+    barawy_data: list = getattr(request.app.state, "barawy_data", [])
     brands: dict[str, list] = {}
-    for meta in metadata.values():
-        brand = meta.get("brand", "")
+    for record in barawy_data:
+        brand = record.get("brand", "")
         if brand:
-            brands.setdefault(brand, []).append(meta)
-
+            brands.setdefault(brand, []).append(record)
     return [_build_store(brand, items) for brand, items in sorted(brands.items())]
 
 
 @router.get("/stores/{store_id}", response_model=StoreDetailResponse)
 def get_store(store_id: str, request: Request):
-    metadata: dict = getattr(request.app.state, "metadata", {})
-
-    brand = _brand_from_slug(store_id, metadata)
+    barawy_data: list = getattr(request.app.state, "barawy_data", [])
+    brand = _brand_from_slug(store_id, barawy_data)
     if not brand:
         raise HTTPException(status_code=404, detail=f"Store '{store_id}' not found")
-
-    brand_items = {k: v for k, v in metadata.items() if v.get("brand", "") == brand}
-    store = _build_store(brand, list(brand_items.values()))
-    items = [_item_to_response(k, v, store_id) for k, v in list(brand_items.items())[:20]]
-
+    brand_items = [r for r in barawy_data if r.get("brand", "") == brand]
+    store = _build_store(brand, brand_items)
+    items = [_item_to_response(r, store_id) for r in brand_items]
     return StoreDetailResponse(store=store, items=items, total_items=store.total_items)
 
 
@@ -120,23 +111,20 @@ def get_store_items(
     category: Optional[str] = None,
     search: Optional[str] = None,
 ):
-    metadata: dict = getattr(request.app.state, "metadata", {})
-
-    brand = _brand_from_slug(store_id, metadata)
+    barawy_data: list = getattr(request.app.state, "barawy_data", [])
+    brand = _brand_from_slug(store_id, barawy_data)
     if not brand:
         raise HTTPException(status_code=404, detail=f"Store '{store_id}' not found")
 
-    results = []
     search_lower = search.lower() if search else None
     category_lower = category.lower() if category else None
-
-    for key, meta in metadata.items():
-        if meta.get("brand", "") != brand:
+    results = []
+    for record in barawy_data:
+        if record.get("brand", "") != brand:
             continue
-        if category_lower and meta.get("category", "").lower() != category_lower:
+        if category_lower and (record.get("category") or "").lower() != category_lower:
             continue
-        if search_lower and search_lower not in meta.get("title", "").lower():
+        if search_lower and search_lower not in (record.get("name") or "").lower():
             continue
-        results.append(_item_to_response(key, meta, store_id))
-
+        results.append(_item_to_response(record, store_id))
     return results
