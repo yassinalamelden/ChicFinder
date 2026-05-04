@@ -8,12 +8,11 @@ import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import { ProductDetailModal, type ModalProduct } from "@/components/ProductDetailModal";
 import { getStoreDetail } from "@/lib/api";
 import { safeExternalUrl } from "@/lib/utils";
 import type { Store, StoreItem } from "@/types/api";
 import type { ChicFinderResult } from "@/types/api";
-
-const CATEGORIES = ["All", "tops", "bottoms", "shoes"];
 
 function storeItemToResult(item: StoreItem): ChicFinderResult {
   return {
@@ -24,10 +23,23 @@ function storeItemToResult(item: StoreItem): ChicFinderResult {
     price_egp: item.price_egp,
     product_url: item.product_url,
     store_location: item.store_location,
+    image_url: item.image_urls?.[0],
     image_urls: item.image_urls,
     description: item.description,
     availability: item.availability,
     availability_egypt: true,
+  };
+}
+
+function toModalProduct(item: StoreItem): ModalProduct {
+  return {
+    title: item.name,
+    brand: item.brand,
+    price_egp: item.price_egp,
+    image_urls: item.image_urls ?? [],
+    description: item.description,
+    availability: item.availability,
+    product_url: item.product_url,
   };
 }
 
@@ -40,6 +52,12 @@ export default function StoreDetailPage() {
   const [error, setError] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<ModalProduct | null>(null);
+
+  const categories = useMemo(
+    () => ["All", ...(store?.categories ?? [])],
+    [store]
+  );
 
   useEffect(() => {
     if (!storeId) return;
@@ -119,7 +137,7 @@ export default function StoreDetailPage() {
         <div className="flex flex-col sm:flex-row gap-3 mb-8">
           {/* Category pills */}
           <div className="flex gap-2 flex-wrap">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
@@ -149,13 +167,22 @@ export default function StoreDetailPage() {
           {loading
             ? Array.from({ length: 10 }).map((_, i) => <ProductCardSkeleton key={i} />)
             : filtered.map((item) => (
-                <ProductCard key={item.id} result={storeItemToResult(item)} />
+                <ProductCard
+                  key={item.id}
+                  result={storeItemToResult(item)}
+                  onClick={() => setSelectedProduct(toModalProduct(item))}
+                />
               ))}
         </div>
 
         {!loading && filtered.length === 0 && !error && (
           <p className="text-white/40 text-center mt-16">No items match your filters.</p>
         )}
+
+        <ProductDetailModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
       </main>
     </div>
   );
