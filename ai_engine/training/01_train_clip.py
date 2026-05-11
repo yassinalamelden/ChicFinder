@@ -5,7 +5,7 @@ from transformers import CLIPModel, CLIPProcessor
 import logging
 from pathlib import Path
 
-from dataset import MockTripletDataset
+from dataset import ChicFinderTripletDataset, MockTripletDataset
 from loss import InfoNCELoss
 
 # Setup logging
@@ -21,8 +21,9 @@ def main():
     processor = CLIPProcessor.from_pretrained(model_id)
     model = CLIPModel.from_pretrained(model_id).to(device)
 
-    # 2. Setup Mock DataLoader (We use batch_size=8 to be safe on VRAM initially)
-    train_dataset = MockTripletDataset(processor, num_samples=160)
+    # 2. Setup DataLoader (We use batch_size=8 to be safe on VRAM initially)
+    # Now using the real dataset with scraped images
+    train_dataset = ChicFinderTripletDataset(processor, metadata_path="data/metadata.json", images_dir="data/raw_images")
     train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 
     # 3. Setup Optimizer, Loss, and AMP Scaler
