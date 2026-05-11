@@ -44,7 +44,12 @@ with open(INPUT_JSONL, 'r', encoding='utf-8') as f:
         
         # Loop through a MAXIMUM of 4 images for this product
         for idx, url in enumerate(image_urls[:4]):
-            filename = f"{brand}_{product_id}_{idx}.jpg"
+            # Get extension from URL or default to .jpg
+            ext = os.path.splitext(url.split('?')[0])[1].lower()
+            if ext not in ['.jpg', '.jpeg', '.png', '.webp']:
+                ext = '.jpg'
+            
+            filename = f"{brand}_{product_id}_{idx}{ext}"
             filepath = os.path.join(OUTPUT_IMAGE_DIR, filename)
             
             # Download the image if we haven't already
@@ -52,6 +57,13 @@ with open(INPUT_JSONL, 'r', encoding='utf-8') as f:
                 try:
                     response = requests.get(url, headers=headers, stream=True, timeout=10)
                     if response.status_code == 200:
+                        # Double check content-type if extension was missing or generic
+                        content_type = response.headers.get('Content-Type', '')
+                        if 'image/webp' in content_type and not filename.endswith('.webp'):
+                            # Rename if we guessed wrong initially
+                            filename = filename.rsplit('.', 1)[0] + '.webp'
+                            filepath = os.path.join(OUTPUT_IMAGE_DIR, filename)
+
                         with open(filepath, 'wb') as img_file:
                             for chunk in response.iter_content(1024):
                                 img_file.write(chunk)
@@ -66,15 +78,17 @@ with open(INPUT_JSONL, 'r', encoding='utf-8') as f:
                 status = "Skipped (Exists)"
             
             # Add this specific image to the final metadata dictionary
-            # FIX APPLIED HERE: Stripping the .jpg extension from the key!
-            final_metadata[filename.replace('.jpg', '')] = {
+            # Store with ACTUAL filename as key (without extension for consistency if needed, 
+            # but usually filenames are better)
+            final_metadata[os.path.splitext(filename)[0]] = {
                 "product_id": product_id,
                 "title": item.get('title'),
                 "brand": item.get('brand'),
                 "category": item.get('category'),
                 "subcategory": item.get('subcategory'),
                 "price": item.get('price'),
-                "product_url": item.get('product_url')
+                "product_url": item.get('product_url'),
+                "filename": filename
             }
             
             # 3. Calculate ETA
