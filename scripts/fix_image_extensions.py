@@ -71,6 +71,10 @@ def fix_extensions():
             
         except Exception as e:
             print(f"Error processing {filename}: {e}")
+            try:
+                os.remove(filepath)
+            except OSError:
+                pass
             errors += 1
 
     # Save corrected metadata
