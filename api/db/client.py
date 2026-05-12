@@ -1,13 +1,22 @@
 # api/db/client.py
 import os
-from functools import lru_cache
+import threading
 from supabase import create_client, Client
 
+_lock = threading.Lock()
+_client: Client | None = None
 
-@lru_cache(maxsize=1)
+
 def get_supabase_client() -> Client:
-    url = os.getenv("SUPABASE_URL", "")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-    if not url or not key:
-        raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment")
-    return create_client(url, key)
+    global _client
+    if _client is None:
+        with _lock:
+            if _client is None:
+                url = os.getenv("SUPABASE_URL", "")
+                key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+                if not url or not key:
+                    raise RuntimeError(
+                        "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment"
+                    )
+                _client = create_client(url, key)
+    return _client
