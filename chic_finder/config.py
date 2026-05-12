@@ -1,33 +1,28 @@
 import os
 from dataclasses import dataclass, field
-from typing import List
 from dotenv import load_dotenv
 
 load_dotenv()
 
 @dataclass
 class Config:
-    """
-    Configuration dataclass for ChicFinder.
-    Reads from .env file and provides default values.
-    """
     # API Settings
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "ChicFinder"
-    
+
     # AI Model Settings
     GEMINI_API_KEY: str = field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
-    GEMINI_MODEL: str = "gemini-2.5-flash" #
-    
-    # AI Engine Settings
-    MARQO_URL: str = field(default_factory=lambda: os.getenv("MARQO_URL", "http://localhost:8882"))
-    MARQO_INDEX_NAME: str = field(default_factory=lambda: os.getenv("MARQO_INDEX_NAME", "chic-finder-index"))
-    VECTOR_DB_PATH: str = field(default_factory=lambda: os.getenv("VECTOR_DB_PATH", "data/faiss_index"))
-    IMAGE_DB_PATH: str = field(default_factory=lambda: os.getenv("IMAGE_DB_PATH", "data/images"))
-    EMBEDDING_DIM: int = 256
-    
-    # Model Paths
-    SEGMENTER_MODEL_PATH: str = field(default_factory=lambda: os.getenv("SEGMENTER_MODEL_PATH", "models/segmenter_vit_b.pth"))
-    ENCODER_MODEL_PATH: str = field(default_factory=lambda: os.getenv("ENCODER_MODEL_PATH", "models/fashion_encoder_vgg16.pth"))
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+
+    # Supabase
+    SUPABASE_URL: str = field(default_factory=lambda: os.getenv("SUPABASE_URL", ""))
+    SUPABASE_SERVICE_ROLE_KEY: str = field(default_factory=lambda: os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""))
+
+    # Legacy (unused after migration, kept for reference)
+    EMBEDDING_DIM: int = 512
+
+    def get_image_url(self, image_filename: str) -> str:
+        """Build public Supabase Storage URL for a product image."""
+        return f"{self.SUPABASE_URL}/storage/v1/object/public/product-images/{image_filename}.jpg"
 
 settings = Config()
