@@ -11,20 +11,35 @@ def _install_supabase_stub():
         stub = types.ModuleType("supabase")
         stub.Client = object
 
-        def create_client(url, key):  # pragma: no cover
-            pass
+        def create_client(url, key):
+            return object()  # return a non-None sentinel
 
         stub.create_client = create_client
         sys.modules["supabase"] = stub
+
+
+def _reset_client_module():
+    """Reset the module-level singleton so tests start clean."""
+    sys.modules.pop("api.db.client", None)
 
 
 def test_get_supabase_client_raises_without_env(monkeypatch):
     _install_supabase_stub()
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
-    # Remove cached module so the import picks up the stub
-    sys.modules.pop("api.db.client", None)
+    _reset_client_module()
     from api.db import client as db_mod
-    db_mod.get_supabase_client.cache_clear()
+    db_mod._client = None  # reset singleton
     with pytest.raises(RuntimeError, match="SUPABASE_URL"):
         db_mod.get_supabase_client()
+
+
+def test_get_supabase_client_returns_client_with_env(monkeypatch):
+    _install_supabase_stub()
+    monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "service_key")
+    _reset_client_module()
+    from api.db import client as db_mod
+    db_mod._client = None  # reset singleton
+    result = db_mod.get_supabase_client()
+    assert result is not None
