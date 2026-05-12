@@ -1,0 +1,38 @@
+# Git
+.git
+.gitignore
+
+# Secrets — never bake into image
+.env
+.env.local
+*.env
+firebase-service-account.json
+
+# Heavy data artifacts (mounted as volumes at runtime)
+data/
+models/
+uploads/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Node / Next.js (not needed in Python API image)
+FrontEnd/
+frontend/
+
+# IDE / OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Docs
+docs/
