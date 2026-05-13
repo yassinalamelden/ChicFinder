@@ -5,7 +5,7 @@ Deep learning-based intelligent expert system for outfit recommendations, based 
 ## Tech Stack
 - **Backend API**: FastAPI + Uvicorn
 - **Frontend**: Streamlit
-- **AI Engine**: PyTorch, Transformers (ViT-B / SETR), VGG-16, FAISS, OpenAI GPT-4o
+- **AI Engine**: PyTorch, Transformers (ViT-B / SETR), VGG-16, FAISS, Gemini API
 - **Infra**: Docker, docker-compose, Nginx
 
 ## Getting Started
