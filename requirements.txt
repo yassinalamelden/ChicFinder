@@ -10,6 +10,7 @@ uvicorn[standard]
 pydantic
 python-multipart          # required for FastAPI file uploads (UploadFile)
 python-dotenv             # loads .env for API keys and config paths
+firebase-admin            # Firebase authentication and SDK
 
 # --- AI & LLM Integration (Slice 2 — Moamen) ---------------
 openai>=1.0.0             # GPT-4o Vision: outfit parsing and reranking
