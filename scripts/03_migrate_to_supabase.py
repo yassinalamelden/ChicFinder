@@ -97,15 +97,17 @@ print("\nInserting embeddings...")
 embeddings_to_insert = []
 for faiss_idx_str, image_key in index_to_image_id.items():
     faiss_idx = int(faiss_idx_str)
-    entry = metadata.get(image_key, {})
-    pid = entry.get("product_id", image_key)
+    # index_to_image_id values may include ".jpg"; strip it to match metadata keys
+    meta_key = image_key[:-4] if image_key.endswith(".jpg") else image_key
+    entry = metadata.get(meta_key, {})
+    pid = entry.get("product_id", meta_key)
     db_id = product_id_map.get(pid)
     if db_id is None:
         continue
     vector: list[float] = faiss_index.reconstruct(faiss_idx).tolist()
     embeddings_to_insert.append({
         "product_id": db_id,
-        "image_filename": image_key,
+        "image_filename": meta_key,
         "embedding": vector,
     })
 
