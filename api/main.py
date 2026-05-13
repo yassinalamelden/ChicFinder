@@ -19,7 +19,6 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from api.routes import health
 from chic_finder.config import settings
@@ -67,19 +66,13 @@ app.add_middleware(
 app.include_router(health.router,    prefix=settings.API_V1_STR, tags=["health"])
 
 # ---------------------------------------------------------------------------
-# Ensure required directories exist (must happen BEFORE app.mount calls)
+# Static file mounts (disabled for initial testing)
 # ---------------------------------------------------------------------------
 
-_UPLOADS_DIR = Path("/tmp/uploads")
-_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-
-
-# ---------------------------------------------------------------------------
-# Static file mounts
-# ---------------------------------------------------------------------------
-
-# User-uploaded query images
-app.mount("/uploads", StaticFiles(directory=str(_UPLOADS_DIR)), name="uploads")
+# TODO: Re-enable StaticFiles mount once health endpoint is fully stable
+# _UPLOADS_DIR = Path("/tmp/uploads")
+# _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+# app.mount("/uploads", StaticFiles(directory=str(_UPLOADS_DIR)), name="uploads")
 
 
 # ---------------------------------------------------------------------------
