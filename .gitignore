@@ -28,11 +28,19 @@ models/
 uploads/
 scrapers/
 data/
+design-extract-output
+
+# Secrets
+firebase-service-account.json
 
 # OS / IDE
 .DS_Store
 .vscode/
 .idea/
+
+# Editor swap files
+*.swp
+*.swo
 
 # Next.js (FrontEnd/)
 FrontEnd/.next/
@@ -44,3 +52,7 @@ FrontEnd/*.tsbuildinfo
 FrontEnd/coverage/
 FrontEnd/build/
 FrontEnd/dist/
+.gstack/
+
+# MCP config (local only)
+.mcp.json
