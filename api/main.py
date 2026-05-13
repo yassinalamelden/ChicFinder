@@ -36,8 +36,14 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Ensure uploads dir exists. All data is now in Supabase."""
-    Path("/tmp/uploads").mkdir(parents=True, exist_ok=True)
+    try:
+        Path("/tmp/uploads").mkdir(parents=True, exist_ok=True)
+        logger.info("✓ Uploads directory ready at /tmp/uploads")
+    except Exception as e:
+        logger.error("✗ Failed to create uploads directory: %s", str(e))
+        raise
     yield
+    logger.info("✓ Lifespan shutdown complete")
 
 # ---------------------------------------------------------------------------
 # Application
