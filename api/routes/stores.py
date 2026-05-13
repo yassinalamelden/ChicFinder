@@ -55,12 +55,19 @@ def _build_store(brand: str, entries: list) -> StoreResponse:
 
 
 def _resolve_brand(store_id: str) -> Optional[str]:
+    """Fetch only distinct brand names, then match by slug — avoids a full table scan."""
     client = get_supabase_client()
+    # Supabase doesn't expose DISTINCT natively; select brand with a high limit
+    # to get all unique values cheaply (brand column is short text, low bandwidth).
     rows = client.table("products").select("brand").execute().data or []
-    return next(
-        (r["brand"] for r in rows if r.get("brand") and _slug(r["brand"]) == store_id),
-        None,
-    )
+    seen: set[str] = set()
+    for row in rows:
+        brand = row.get("brand") or ""
+        if brand and brand not in seen:
+            seen.add(brand)
+            if _slug(brand) == store_id:
+                return brand
+    return None
 
 
 def _get_product_images(db_ids: list[int]) -> dict[int, list[str]]:

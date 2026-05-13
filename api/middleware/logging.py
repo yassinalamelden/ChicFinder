@@ -11,5 +11,5 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
         response = await call_next(request)
         process_time = time.time() - start_time
-        logging.info(f"API request {request.url.path} processed in {process_time:.4f}s")
+        logging.info("API request %s processed in %.4fs", request.url.path, process_time)
         return response

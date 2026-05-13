@@ -1,5 +1,4 @@
 import uuid
-import os
 import io
 import logging
 from pathlib import Path
@@ -13,9 +12,6 @@ from ai_engine.embeddings.supabase_vector_store import search_by_vector
 from chic_finder.config import settings
 
 logger = logging.getLogger(__name__)
-
-# Force CPU mode to avoid VRAM crashes
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 router = APIRouter()
 
@@ -48,23 +44,25 @@ async def get_recommendations(file: UploadFile = File(...)):
 
     raw_bytes = await file.read()
 
-    # 1. Sanitize image
+    # Sanitize: open as PIL to validate, then re-encode to PNG for storage
     try:
         img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
         _ensure_uploads_dir()
         saved_filename = f"{uuid.uuid4()}_clean.png"
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        clean_bytes = buf.getvalue()
         save_path = UPLOADS_DIR / saved_filename
-        img.save(save_path, format="PNG")
+        save_path.write_bytes(clean_bytes)
         query_url = f"/uploads/{saved_filename}"
     except Exception as e:
-        logger.error("Image sanitization failed: %s", str(e))
+        logger.error("Image sanitization failed: %s", e)
         raise HTTPException(status_code=400, detail="Invalid image format")
 
-    # 2. Encode + Supabase pgvector search
+    # Encode with public API, then vector search
     try:
         encoder = get_encoder()
-        raw_vector = encoder._encode(img)
-        query_vector = encoder._normalize(raw_vector)
+        query_vector = encoder.encode(clean_bytes)
 
         results = search_by_vector(query_vector, top_k=5)
 
