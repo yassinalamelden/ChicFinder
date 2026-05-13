@@ -14,6 +14,7 @@ firebase-admin            # Firebase authentication and SDK
 
 # --- AI & LLM Integration (Slice 2 — Moamen) ---------------
 openai>=1.0.0             # GPT-4o Vision: outfit parsing and reranking
+google-genai              # Google Gemini API (outfit parsing and reranking)
 
 # --- AI & Embeddings (Slice 2 — Yassin, Amr, Moamen) -------
 torch>=2.1.1              # FashionCLIP backbone

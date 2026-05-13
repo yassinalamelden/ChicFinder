@@ -1,9 +1,12 @@
+import logging
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from api.db.client import get_supabase_client
 from chic_finder.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -100,53 +103,63 @@ def _build_item(row: dict, product_images: dict[int, list[str]], store_id: str) 
 
 @router.get("/stores", response_model=List[StoreResponse])
 def list_stores():
-    client = get_supabase_client()
-    rows = client.table("products").select("brand, category, product_id").execute().data or []
+    try:
+        client = get_supabase_client()
+        rows = client.table("products").select("brand, category, product_id").execute().data or []
 
-    brands: dict[str, list] = {}
-    seen: set = set()
-    for row in rows:
-        pid = row.get("product_id", "")
-        if pid in seen:
-            continue
-        seen.add(pid)
-        brand = row.get("brand") or ""
-        if brand:
-            brands.setdefault(brand, []).append(row)
+        brands: dict[str, list] = {}
+        seen: set = set()
+        for row in rows:
+            pid = row.get("product_id", "")
+            if pid in seen:
+                continue
+            seen.add(pid)
+            brand = row.get("brand") or ""
+            if brand:
+                brands.setdefault(brand, []).append(row)
 
-    return [_build_store(brand, entries) for brand, entries in sorted(brands.items())]
+        return [_build_store(brand, entries) for brand, entries in sorted(brands.items())]
+    except Exception as e:
+        logger.error("list_stores: Database error: %s", str(e))
+        raise HTTPException(status_code=500, detail="Failed to retrieve stores")
 
 
 @router.get("/stores/{store_id}", response_model=StoreDetailResponse)
 def get_store(store_id: str):
-    brand = _resolve_brand(store_id)
-    if not brand:
-        raise HTTPException(status_code=404, detail=f"Store '{store_id}' not found")
+    try:
+        brand = _resolve_brand(store_id)
+        if not brand:
+            raise HTTPException(status_code=404, detail=f"Store '{store_id}' not found")
 
-    client = get_supabase_client()
-    product_rows = (
-        client.table("products")
-        .select("id, product_id, title, brand, category, price, product_url, description, availability")
-        .eq("brand", brand)
-        .execute()
-        .data or []
-    )
+        client = get_supabase_client()
+        product_rows = (
+            client.table("products")
+            .select("id, product_id, title, brand, category, price, product_url, description, availability")
+            .eq("brand", brand)
+            .execute()
+            .data or []
+        )
 
-    db_ids = [r["id"] for r in product_rows]
-    product_images = _get_product_images(db_ids)
+        db_ids = [r["id"] for r in product_rows]
+        product_images = _get_product_images(db_ids)
 
-    seen_pids: set = set()
-    items = []
-    for row in product_rows:
-        pid = row["product_id"]
-        if pid in seen_pids:
-            continue
-        seen_pids.add(pid)
-        items.append(_build_item(row, product_images, store_id))
+        seen_pids: set = set()
+        items = []
+        for row in product_rows:
+            pid = row["product_id"]
+            if pid in seen_pids:
+                continue
+            seen_pids.add(pid)
+            items.append(_build_item(row, product_images, store_id))
 
-    store_entries = [{"brand": r["brand"], "category": r["category"]} for r in product_rows]
-    store = _build_store(brand, store_entries)
-    return StoreDetailResponse(store=store, items=items, total_items=len(items))
+        store_entries = [{"brand": r["brand"], "category": r["category"]} for r in product_rows]
+        store = _build_store(brand, store_entries)
+        return StoreDetailResponse(store=store, items=items, total_items=len(items))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("get_store: Database error: %s", str(e))
+        raise HTTPException(status_code=500, detail="Failed to retrieve store details")
 
 
 @router.get("/stores/{store_id}/items", response_model=List[StoreItemResponse])
@@ -155,31 +168,37 @@ def get_store_items(
     category: Optional[str] = None,
     search: Optional[str] = None,
 ):
-    brand = _resolve_brand(store_id)
-    if not brand:
-        raise HTTPException(status_code=404, detail=f"Store '{store_id}' not found")
+    try:
+        brand = _resolve_brand(store_id)
+        if not brand:
+            raise HTTPException(status_code=404, detail=f"Store '{store_id}' not found")
 
-    client = get_supabase_client()
-    query = (
-        client.table("products")
-        .select("id, product_id, title, brand, category, price, product_url, description, availability")
-        .eq("brand", brand)
-    )
-    if category:
-        query = query.ilike("category", category)
-    if search:
-        query = query.ilike("title", f"%{search}%")
+        client = get_supabase_client()
+        query = (
+            client.table("products")
+            .select("id, product_id, title, brand, category, price, product_url, description, availability")
+            .eq("brand", brand)
+        )
+        if category:
+            query = query.ilike("category", category)
+        if search:
+            query = query.ilike("title", f"%{search}%")
 
-    product_rows = query.execute().data or []
-    db_ids = [r["id"] for r in product_rows]
-    product_images = _get_product_images(db_ids)
+        product_rows = query.execute().data or []
+        db_ids = [r["id"] for r in product_rows]
+        product_images = _get_product_images(db_ids)
 
-    seen_pids: set = set()
-    results = []
-    for row in product_rows:
-        pid = row["product_id"]
-        if pid in seen_pids:
-            continue
-        seen_pids.add(pid)
-        results.append(_build_item(row, product_images, store_id))
-    return results
+        seen_pids: set = set()
+        results = []
+        for row in product_rows:
+            pid = row["product_id"]
+            if pid in seen_pids:
+                continue
+            seen_pids.add(pid)
+            results.append(_build_item(row, product_images, store_id))
+        return results
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("get_store_items: Database error: %s", str(e))
+        raise HTTPException(status_code=500, detail="Failed to retrieve store items")

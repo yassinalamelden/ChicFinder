@@ -19,7 +19,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 router = APIRouter()
 
-UPLOADS_DIR = Path("uploads")
+UPLOADS_DIR = Path("/tmp/uploads")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 

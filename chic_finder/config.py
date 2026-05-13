@@ -1,8 +1,10 @@
 import os
+import logging
 from dataclasses import dataclass, field
 from dotenv import load_dotenv
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 @dataclass
 class Config:
@@ -20,6 +22,17 @@ class Config:
 
     # Legacy (unused after migration, kept for reference)
     EMBEDDING_DIM: int = 512
+
+    def __post_init__(self):
+        warnings = []
+        if not self.SUPABASE_URL:
+            warnings.append("SUPABASE_URL env var is not set — database operations will fail")
+        if not self.SUPABASE_SERVICE_ROLE_KEY:
+            warnings.append("SUPABASE_SERVICE_ROLE_KEY env var is not set — database operations will fail")
+        if not self.GEMINI_API_KEY:
+            warnings.append("GEMINI_API_KEY env var is not set — LLM-dependent features will fail")
+        for w in warnings:
+            logger.warning("Config warning: %s", w)
 
     def get_image_url(self, image_filename: str) -> str:
         """Return public Supabase Storage URL for a product image.

@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Ensure uploads dir exists. All data is now in Supabase."""
-    Path("uploads").mkdir(parents=True, exist_ok=True)
+    Path("/tmp/uploads").mkdir(parents=True, exist_ok=True)
     yield
 
 # ---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ app.include_router(stores.router,    prefix=settings.API_V1_STR, tags=["stores"]
 # Ensure required directories exist (must happen BEFORE app.mount calls)
 # ---------------------------------------------------------------------------
 
-_UPLOADS_DIR = Path("uploads")
+_UPLOADS_DIR = Path("/tmp/uploads")
 _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -86,4 +86,14 @@ app.mount("/uploads", StaticFiles(directory=str(_UPLOADS_DIR)), name="uploads")
 
 @app.get("/")
 async def serve_frontend():
-    return FileResponse("index.html")
+    return {
+        "service": "ChicFinder API",
+        "version": "1.0",
+        "docs": "/docs",
+        "health": "/api/v1/health",
+        "endpoints": {
+            "recommend": "POST /api/v1/recommend",
+            "search": "POST /api/v1/search",
+            "stores": "GET /api/v1/stores"
+        }
+    }
