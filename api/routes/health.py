@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 import logging
 
-from chic_finder.dependencies.supabase import get_supabase_client
+from api.db.client import get_supabase_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
