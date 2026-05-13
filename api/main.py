@@ -37,24 +37,6 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Ensure uploads dir exists. All data is now in Supabase."""
     Path("uploads").mkdir(parents=True, exist_ok=True)
-
-    # Warm up the FashionCLIP encoder (downloads model on first run)
-    try:
-        from ai_engine.embeddings.encoder import get_encoder
-        get_encoder()
-        logger.info("FashionCLIP encoder ready.")
-    except Exception as exc:
-        logger.error("Failed to warm up encoder: %s", exc)
-
-    # Verify Supabase connection
-    try:
-        from api.db.client import get_supabase_client
-        client = get_supabase_client()
-        client.table("products").select("id").limit(1).execute()
-        logger.info("Supabase connection verified.")
-    except Exception as exc:
-        logger.error("Supabase connection failed: %s", exc)
-
     yield
 
 # ---------------------------------------------------------------------------
