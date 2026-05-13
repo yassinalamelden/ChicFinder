@@ -3,7 +3,7 @@
 dockerfilePath = "infrastructure/docker/Dockerfile.api"
 
 [deploy]
-startCommand = "sh -c \"unicorn main:app --port $PORT\""
+startCommand = "unicorn main:app --port 8000"
 healthcheckPath = "/api/v1/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
