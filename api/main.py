@@ -19,12 +19,13 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 
-from api.routes import recommend, health, search, stores
-from api.middleware.logging import LoggingMiddleware
+from api.routes import health
 from chic_finder.config import settings
+
+# TODO: Re-enable these routes once health endpoint is stable
+# from api.routes import recommend, search, stores
+# from api.middleware.logging import LoggingMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -61,14 +62,8 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# Custom logging middleware
-app.add_middleware(LoggingMiddleware)
-
 # Routers
-app.include_router(recommend.router, prefix=settings.API_V1_STR, tags=["recommendation"])
 app.include_router(health.router,    prefix=settings.API_V1_STR, tags=["health"])
-app.include_router(search.router,    prefix=settings.API_V1_STR, tags=["search"])
-app.include_router(stores.router,    prefix=settings.API_V1_STR, tags=["stores"])
 
 # ---------------------------------------------------------------------------
 # Ensure required directories exist (must happen BEFORE app.mount calls)
