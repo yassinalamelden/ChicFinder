@@ -27,7 +27,6 @@ models/
 *.onnx
 uploads/
 scrapers/
-data/
 design-extract-output
 
 # Secrets
@@ -53,6 +52,8 @@ FrontEnd/coverage/
 FrontEnd/build/
 FrontEnd/dist/
 .gstack/
+.coverage
+.pytest_cache/
 
 # MCP config (local only)
 .mcp.json
