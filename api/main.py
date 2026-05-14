@@ -9,7 +9,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import health
+from api.routes import health, recommend, search, stores
 from chic_finder.config import settings
 
 logger = logging.getLogger(__name__)
@@ -33,6 +33,9 @@ app.add_middleware(
 )
 
 app.include_router(health.router, prefix=settings.API_V1_STR, tags=["health"])
+app.include_router(recommend.router, prefix=settings.API_V1_STR, tags=["recommend"])
+app.include_router(search.router, prefix=settings.API_V1_STR, tags=["search"])
+app.include_router(stores.router, prefix=settings.API_V1_STR, tags=["stores"])
 
 
 @app.get("/")
