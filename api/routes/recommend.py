@@ -17,6 +17,7 @@ router = APIRouter()
 
 UPLOADS_DIR = Path("uploads")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 class RecommendedItem(BaseModel):
@@ -43,6 +44,8 @@ async def get_recommendations(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Invalid file type. Images only.")
 
     raw_bytes = await file.read()
+    if len(raw_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 10 MB.")
 
     # Sanitize: open as PIL to validate, then re-encode to PNG for storage
     try:

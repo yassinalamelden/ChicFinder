@@ -68,7 +68,9 @@ def search_endpoint(
                     status_code=400,
                     detail="Unsupported image format. Supported: JPEG, PNG, WEBP, GIF",
                 )
-            img.verify()
+            # Re-open fresh before verify() — PIL requires an unread stream;
+            # accessing .format above may advance the internal file pointer.
+            Image.open(io.BytesIO(image_bytes)).verify()
         except HTTPException:
             raise
         except Exception as e:
