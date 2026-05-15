@@ -1,5 +1,6 @@
+import functools
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from api.db.client import get_supabase_client
@@ -54,11 +55,10 @@ def _build_store(brand: str, entries: list) -> StoreResponse:
     )
 
 
+@functools.lru_cache(maxsize=256)
 def _resolve_brand(store_id: str) -> Optional[str]:
-    """Fetch only distinct brand names, then match by slug — avoids a full table scan."""
+    """Fetch distinct brand names and match by slug. Result is cached for the process lifetime."""
     client = get_supabase_client()
-    # Supabase doesn't expose DISTINCT natively; select brand with a high limit
-    # to get all unique values cheaply (brand column is short text, low bandwidth).
     rows = client.table("products").select("brand").execute().data or []
     seen: set[str] = set()
     for row in rows:
@@ -161,6 +161,8 @@ def get_store_items(
     store_id: str,
     category: Optional[str] = None,
     search: Optional[str] = None,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
     brand = _resolve_brand(store_id)
     if not brand:
@@ -182,11 +184,11 @@ def get_store_items(
     product_images = _get_product_images(db_ids)
 
     seen_pids: set = set()
-    results = []
+    all_items = []
     for row in product_rows:
         pid = row["product_id"]
         if pid in seen_pids:
             continue
         seen_pids.add(pid)
-        results.append(_build_item(row, product_images, store_id))
-    return results
+        all_items.append(_build_item(row, product_images, store_id))
+    return all_items[offset : offset + limit]
