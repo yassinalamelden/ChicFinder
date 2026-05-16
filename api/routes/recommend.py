@@ -1,12 +1,12 @@
-import uuid
-import os
 import io
 import logging
+import os
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from PIL import Image
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
 
 from ai_engine.embeddings.encoder import get_encoder
 from ai_engine.embeddings.supabase_vector_store import search_by_vector
@@ -14,12 +14,11 @@ from chic_finder.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Force CPU mode to avoid VRAM crashes
+# Force CPU mode to avoid VRAM crashes on Railway
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 router = APIRouter()
 
-UPLOADS_DIR = Path("/tmp/uploads")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
@@ -36,10 +35,6 @@ class RecommendationResponse(BaseModel):
     recommendations: List[RecommendedItem]
 
 
-def _ensure_uploads_dir() -> None:
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-
-
 @router.post("/recommend")
 async def get_recommendations(file: UploadFile = File(...)):
     suffix = Path(file.filename or "image.png").suffix.lower()
@@ -48,14 +43,9 @@ async def get_recommendations(file: UploadFile = File(...)):
 
     raw_bytes = await file.read()
 
-    # 1. Sanitize image
+    # 1. Sanitize image (in memory only — no ephemeral file write)
     try:
         img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
-        _ensure_uploads_dir()
-        saved_filename = f"{uuid.uuid4()}_clean.png"
-        save_path = UPLOADS_DIR / saved_filename
-        img.save(save_path, format="PNG")
-        query_url = f"/uploads/{saved_filename}"
     except Exception as e:
         logger.error("Image sanitization failed: %s", str(e))
         raise HTTPException(status_code=400, detail="Invalid image format")
@@ -87,7 +77,6 @@ async def get_recommendations(file: UploadFile = File(...)):
 
         return {
             "success": True,
-            "query_url": query_url,
             "engine_used": "FashionCLIP_Supabase",
             "recommendations": [recommendation],
         }
