@@ -1,5 +1,9 @@
 import streamlit as st
 import os
+from pathlib import Path
+
+# Project root is one level above this file (frontend/ → ChicFinder/)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 def render_results(api_response: dict):
     """
@@ -42,11 +46,17 @@ def render_results(api_response: dict):
                 """, unsafe_allow_html=True)
                 
                 # Render Image
-                image_path = os.path.join(os.getcwd(), "data", "raw_images", f"{image_id}.jpg")
-                if os.path.exists(image_path):
-                    st.image(image_path, use_container_width=True)
+                images_dir = _PROJECT_ROOT / "data" / "raw_images"
+                image_path = None
+                for ext in (".jpg", ".jpeg", ".png"):
+                    candidate = images_dir / f"{image_id}{ext}"
+                    if candidate.exists():
+                        image_path = candidate
+                        break
+                if image_path:
+                    st.image(str(image_path), use_container_width=True)
                 else:
-                    st.warning("Image off-limit.")
+                    st.warning("Image not found.")
                 
                 # Formatted metadata box underneath image
                 st.markdown(f"""
