@@ -115,6 +115,14 @@ class FashionCLIPEncoder:
         self._model = CLIPModel.from_pretrained(model_source, low_cpu_mem_usage=True)
         self._model.eval()
 
+        # Dynamic int8 quantization on Linear layers in the vision model.
+        # Converts fp32 matmuls to int8 BLAS ops: ~2-4x faster on CPU with
+        # negligible impact on retrieval quality.
+        from torch.quantization import quantize_dynamic as _qdyn
+        self._model.vision_model = _qdyn(
+            self._model.vision_model, {torch.nn.Linear}, dtype=torch.qint8
+        )
+
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._model.to(self._device)
 
