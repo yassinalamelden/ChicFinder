@@ -42,8 +42,12 @@ def search_similar_items(image_bytes: bytes, top_k: int = 50) -> list[dict]:
 def search_by_vector(query_vector: np.ndarray, top_k: int = 50) -> list[dict]:
     """Query pgvector directly with a pre-computed 512-d embedding."""
     client = get_supabase_client()
-    result = client.rpc(
-        "match_embeddings",
-        {"query_embedding": query_vector.tolist(), "match_count": top_k},
-    ).execute()
-    return _rows_to_dicts(result.data or [])
+    try:
+        result = client.rpc(
+            "match_embeddings",
+            {"query_embedding": query_vector.tolist(), "match_count": top_k},
+        ).execute()
+        return _rows_to_dicts(result.data or [])
+    except Exception as exc:
+        logger.error("pgvector RPC failed: %s", exc, exc_info=True)
+        raise

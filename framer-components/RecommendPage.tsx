@@ -376,7 +376,8 @@ export default function RecommendPage(props: RecommendPageProps) {
             const results = await callRecommend(file)
             setItems(results)
             setPhase("results")
-        } catch {
+        } catch (err) {
+            console.error("[ChicFinder] recommend failed:", err)
             setErrorMsg("Something went wrong. Please try again.")
             setPhase("error")
         }

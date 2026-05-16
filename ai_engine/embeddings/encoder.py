@@ -22,9 +22,11 @@ Output contract (agreed with Moamen + Amr):
 
 from __future__ import annotations
 
+import gc
 import io
 import logging
 import os
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -85,6 +87,7 @@ class FashionCLIPEncoder:
     """
 
     _instance: Optional["FashionCLIPEncoder"] = None
+    _lock = threading.Lock()
 
     def __init__(self) -> None:
         torch = _load_torch()
@@ -180,12 +183,16 @@ class FashionCLIPEncoder:
         """PIL image → raw 512-d numpy vector via FashionCLIP."""
         import torch
 
-        inputs = self._processor(images=image, return_tensors="pt")
-        inputs = {k: v.to(self._device) for k, v in inputs.items()}
-        with torch.no_grad():
-            vision_outputs = self._model.vision_model(**inputs)
-            features = self._model.visual_projection(vision_outputs.pooler_output)
-        return features.squeeze(0).cpu().numpy().astype(np.float32)
+        with self._lock:
+            inputs = self._processor(images=image, return_tensors="pt")
+            inputs = {k: v.to(self._device) for k, v in inputs.items()}
+            with torch.no_grad():
+                vision_outputs = self._model.vision_model(**inputs)
+                features = self._model.visual_projection(vision_outputs.pooler_output)
+            result = features.squeeze(0).cpu().numpy().astype(np.float32)
+            del inputs, vision_outputs, features
+            gc.collect()
+            return result
 
     @staticmethod
     def _normalize(vector: np.ndarray) -> np.ndarray:

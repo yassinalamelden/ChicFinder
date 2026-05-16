@@ -1,6 +1,8 @@
+import asyncio
 import io
 import logging
 import os
+from functools import partial
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -20,6 +22,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 router = APIRouter()
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_IMAGE_SIDE = 512
 
 
 class RecommendedItem(BaseModel):
@@ -48,17 +51,20 @@ async def get_recommendations(file: UploadFile = File(...)):
     # 1. Sanitize image (in memory only — no ephemeral file write)
     try:
         img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
+        if max(img.size) > MAX_IMAGE_SIDE:
+            img.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE), Image.LANCZOS)
     except Exception as e:
         logger.error("Image sanitization failed: %s", str(e))
         raise HTTPException(status_code=400, detail="Invalid image format")
 
-    # 2. Encode + Supabase pgvector search
+    # 2. Encode + Supabase pgvector search (blocking calls moved off event loop)
     try:
+        loop = asyncio.get_event_loop()
         encoder = get_encoder()
-        raw_vector = encoder._encode(img)
+        raw_vector = await loop.run_in_executor(None, encoder._encode, img)
         query_vector = encoder._normalize(raw_vector)
 
-        results = search_by_vector(query_vector, top_k=5)
+        results = await loop.run_in_executor(None, partial(search_by_vector, query_vector, top_k=5))
 
         items = []
         for meta in results:
