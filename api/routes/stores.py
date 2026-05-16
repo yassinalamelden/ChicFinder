@@ -59,7 +59,7 @@ def _build_store(brand: str, entries: list) -> StoreResponse:
 
 def _resolve_brand(store_id: str) -> Optional[str]:
     client = get_supabase_client()
-    rows = client.table("products").select("brand").execute().data or []
+    rows = client.table("products").select("brand").limit(5000).execute().data or []
     return next(
         (r["brand"] for r in rows if r.get("brand") and _slug(r["brand"]) == store_id),
         None,
@@ -74,6 +74,7 @@ def _get_product_images(db_ids: list[int]) -> dict[int, list[str]]:
         client.table("embeddings")
         .select("product_id, image_filename")
         .in_("product_id", db_ids)
+        .limit(5000)
         .execute()
         .data or []
     )
@@ -105,7 +106,7 @@ def _build_item(row: dict, product_images: dict[int, list[str]], store_id: str) 
 def list_stores():
     try:
         client = get_supabase_client()
-        rows = client.table("products").select("brand, category, product_id").execute().data or []
+        rows = client.table("products").select("brand, category, product_id").limit(5000).execute().data or []
 
         brands: dict[str, list] = {}
         seen: set = set()
@@ -136,6 +137,7 @@ def get_store(store_id: str):
             client.table("products")
             .select("id, product_id, title, brand, category, price, product_url, description, availability")
             .eq("brand", brand)
+            .limit(5000)
             .execute()
             .data or []
         )
@@ -184,7 +186,7 @@ def get_store_items(
         if search:
             query = query.ilike("title", f"%{search}%")
 
-        product_rows = query.execute().data or []
+        product_rows = query.limit(5000).execute().data or []
         db_ids = [r["id"] for r in product_rows]
         product_images = _get_product_images(db_ids)
 
