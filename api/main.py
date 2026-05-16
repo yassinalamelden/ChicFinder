@@ -17,7 +17,11 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Path("/tmp/uploads").mkdir(parents=True, exist_ok=True)
+    # Warm up the CLIP encoder at startup so the first /recommend request
+    # doesn't trigger a cold model load (which would spike memory and timeout).
+    from ai_engine.embeddings.encoder import get_encoder
+    get_encoder()
+    logger.info("CLIP encoder warm-up complete")
     yield
 
 

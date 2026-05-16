@@ -6,12 +6,19 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     build-essential \
-    libgl1 \
-    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download the fine-tuned ChicFinder CLIP model at build time so it is
+# cached on disk inside the image. Runtime loads from cache — no network call,
+# no auth needed at runtime. Requires the HuggingFace repo to be public.
+RUN python -c "\
+from transformers import CLIPModel, CLIPProcessor; \
+CLIPModel.from_pretrained('nouratef/chicfinder-clip'); \
+CLIPProcessor.from_pretrained('nouratef/chicfinder-clip'); \
+print('Fine-tuned ChicFinder model cached OK')"
 
 COPY . .
 
