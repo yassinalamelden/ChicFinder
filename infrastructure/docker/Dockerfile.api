@@ -16,8 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # no auth needed at runtime. Requires the HuggingFace repo to be public.
 RUN python -c "\
 from transformers import CLIPModel, CLIPProcessor; \
-CLIPModel.from_pretrained('nouratef/chicfinder-clip'); \
-CLIPProcessor.from_pretrained('nouratef/chicfinder-clip'); \
+CLIPModel.from_pretrained('NourAtef112/chicfinder-clip'); \
+CLIPProcessor.from_pretrained('NourAtef112/chicfinder-clip'); \
 print('Fine-tuned ChicFinder model cached OK')"
 
 COPY . .
