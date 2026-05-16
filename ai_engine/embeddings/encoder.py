@@ -96,10 +96,17 @@ class FashionCLIPEncoder:
         if local_model_path.exists():
             logger.info("Loading local CLIP model from: %s", local_model_path)
             model_source = str(local_model_path)
+        elif os.getenv("CLIP_MODEL_PATH"):
+            # Explicitly configured but not a local path → treat as HF model ID
+            logger.info(
+                "Local path %s not found; using CLIP_MODEL_PATH as HF model ID: %s",
+                local_model_path,
+                configured_model_path,
+            )
+            model_source = configured_model_path
         else:
             logger.info(
-                "Local CLIP model not found at %s. Falling back to %s",
-                local_model_path,
+                "No local model found; falling back to default: %s",
                 CLIP_MODEL_ID,
             )
             model_source = CLIP_MODEL_ID

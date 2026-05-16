@@ -131,3 +131,28 @@ def test_get_encoder_returns_singleton(reset_encoder_singleton):
     result = get_encoder()
     assert result is sentinel
     FashionCLIPEncoder._instance = None  # cleanup
+
+
+# ---------------------------------------------------------------------------
+# Test: CLIP_MODEL_PATH used as HF model ID when local path is missing
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+def test_encoder_uses_clip_model_path_as_hf_id_when_local_missing(monkeypatch):
+    """If CLIP_MODEL_PATH is set but not a valid local path, use it as HF model ID."""
+    monkeypatch.setenv("CLIP_MODEL_PATH", "nonexistent/chicfinder-clip")
+
+    captured_source = {}
+
+    def fake_from_pretrained(source, *args, **kwargs):
+        captured_source["source"] = source
+        return MagicMock()
+
+    with patch("transformers.CLIPProcessor.from_pretrained", side_effect=fake_from_pretrained), \
+         patch("transformers.CLIPModel.from_pretrained", return_value=MagicMock()), \
+         patch("torch.cuda.is_available", return_value=False):
+        FashionCLIPEncoder._instance = None  # reset singleton
+        enc = FashionCLIPEncoder()
+        FashionCLIPEncoder._instance = None  # cleanup
+
+    assert captured_source["source"] == "nonexistent/chicfinder-clip"
