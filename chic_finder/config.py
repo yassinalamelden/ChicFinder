@@ -43,6 +43,6 @@ class Config:
         if not self.SUPABASE_URL:
             raise RuntimeError("SUPABASE_URL is not configured; cannot build Storage URL")
         stem = image_filename.rsplit(".", 1)[0] if "." in image_filename else image_filename
-        return f"{self.SUPABASE_URL}/storage/v1/object/public/product-images/{stem}.jpg"
+        return f"{self.SUPABASE_URL.rstrip('/')}/storage/v1/object/public/product-images/{stem}.jpg"
 
 settings = Config()
