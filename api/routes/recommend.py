@@ -24,10 +24,12 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 class RecommendedItem(BaseModel):
     id: str
+    name: Optional[str] = ""
     category: str
     image_url: str
     price: Optional[Any] = "N/A"
     brand: Optional[str] = "ChicFinder"
+    product_url: Optional[str] = None
 
 
 class RecommendationResponse(BaseModel):
@@ -64,10 +66,12 @@ async def get_recommendations(file: UploadFile = File(...)):
             image_url = settings.get_image_url(image_filename)
             items.append(RecommendedItem(
                 id=str(meta.get("id")),
+                name=meta.get("title") or "",
                 category=meta.get("category") or "Fashion Item",
                 image_url=image_url,
                 price=meta.get("price", "N/A"),
                 brand=meta.get("brand") or "ChicFinder",
+                product_url=meta.get("product_url"),
             ))
 
         recommendation = RecommendationResponse(
