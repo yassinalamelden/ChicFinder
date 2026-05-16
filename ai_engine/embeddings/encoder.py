@@ -112,7 +112,7 @@ class FashionCLIPEncoder:
             model_source = CLIP_MODEL_ID
 
         self._processor = CLIPProcessor.from_pretrained(model_source)
-        self._model = CLIPModel.from_pretrained(model_source)
+        self._model = CLIPModel.from_pretrained(model_source, low_cpu_mem_usage=True)
         self._model.eval()
 
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

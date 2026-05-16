@@ -20,13 +20,12 @@ google-genai              # Google Gemini API (outfit parsing and reranking)
 torch>=2.1.1              # FashionCLIP backbone
 torchvision>=0.16.1       # image transforms (used by VGG-16 based models)
 transformers              # CLIPModel + CLIPProcessor (HuggingFace API)
+accelerate                # low_cpu_mem_usage support for transformers (reduces peak RAM on load)
 numpy                     # vector ops, L2 normalization
 supabase>=2.0.0           # Supabase Python client (DB + storage RPC)
 
 # --- Image Handling -----------------------------------------
 Pillow                    # PIL — image decode/resize across all modules
-rembg                     # background removal (used in preprocessing pipeline)
-opencv-python-headless    # image processing utilities (headless for server environments)
 
 # --- Data & Scripts (Slice 2 scripts + Slice 3) -------------
 pandas                    # styles.csv parsing in scripts/ and Slice 3 metadata
