@@ -59,11 +59,13 @@ def _build_store(brand: str, entries: list) -> StoreResponse:
 
 def _resolve_brand(store_id: str) -> Optional[str]:
     client = get_supabase_client()
-    rows = client.table("products").select("brand").limit(5000).execute().data or []
-    return next(
-        (r["brand"] for r in rows if r.get("brand") and _slug(r["brand"]) == store_id),
-        None,
-    )
+    result = client.rpc("get_brand_by_slug", {"p_slug": store_id}).execute()
+    data = result.data
+    if not data:
+        return None
+    if isinstance(data, list):
+        return data[0] if data[0] else None
+    return str(data) if data else None
 
 
 def _get_product_images(db_ids: list[int]) -> dict[int, list[str]]:
