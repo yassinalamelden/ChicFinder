@@ -270,6 +270,3 @@ docker run -p 8000:8000 --env-file .env chicfinder-api
 
 ---
 
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
