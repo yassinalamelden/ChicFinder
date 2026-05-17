@@ -60,3 +60,6 @@ FrontEnd/dist/
 
 # Claude Code (local config)
 .claude/
+
+# Local contribution notes (not for repo)
+CONTRIBUTIONS.md
