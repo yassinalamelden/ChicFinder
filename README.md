@@ -54,12 +54,10 @@ ChicFinder is an AI-powered fashion visual search system built for the Egyptian 
 
 ## 📸 Screenshots
 
-| Search Interface | Results Gallery |
+| Homepage | Search Results |
 |---|---|
-| *Upload your outfit photo* | *Matched products from Egyptian brands* |
-| ![Search](docs/images/search.png) | ![Results](docs/images/results.png) |
-
-> 📌 Screenshots coming soon — deployment in progress.
+| *Upload your outfit photo or use camera capture* | *Top-5 matched products from Egyptian brands* |
+| ![Homepage](docs/images/homepage.png) | ![Results](docs/images/results.png) |
 
 ---
 
