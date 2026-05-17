@@ -32,7 +32,7 @@ ChicFinder is an AI-powered fashion visual search system built for the Egyptian 
 
 ### 🛍️ Local Brand Catalog
 
-- 8,570+ product images from Egyptian brands: Tomato, Town Team, LokalEG, Barawy
+- 8,570+ product images from Egyptian brands: Tomato, Town Team, LokalEG
 - Rich metadata: brand, price (EGP), product URL, store location, availability
 
 ### 🔒 Secure API
