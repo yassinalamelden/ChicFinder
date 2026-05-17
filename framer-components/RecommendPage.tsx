@@ -78,7 +78,7 @@ function ProductCard({ item, delay, onClick }: { item: Item; delay: number; onCl
                             opacity: 0.3,
                         }}
                     >
-                        👗
+                        Fashion
                     </div>
                 )}
             </div>
@@ -181,7 +181,7 @@ function ProductModal({ item, onClose }: { item: Item; onClose: () => void }) {
                                 opacity: 0.2,
                             }}
                         >
-                            👗
+                            No Image
                         </div>
                     )}
                     <button
@@ -203,7 +203,7 @@ function ProductModal({ item, onClose }: { item: Item; onClose: () => void }) {
                             justifyContent: "center",
                         }}
                     >
-                        ✕
+                        x
                     </button>
                 </div>
                 {imgs.length > 1 && (
@@ -272,7 +272,7 @@ function ProductModal({ item, onClose }: { item: Item; onClose: () => void }) {
                             whileHover={{ scale: 1.02, backgroundColor: "#333" }}
                             whileTap={{ scale: 0.98 }}
                         >
-                            Shop Now →
+                            Shop Now
                         </motion.a>
                     ) : (
                         <div
@@ -299,7 +299,7 @@ function ProductModal({ item, onClose }: { item: Item; onClose: () => void }) {
 
 /**
  * @framerIntrinsicWidth 1200
- * @framerIntrinsicHeight 600
+ * @framerIntrinsicHeight 800
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
  */
@@ -311,6 +311,7 @@ export default function RecommendPage(props: RecommendPageProps) {
     const [items, setItems] = useState<Item[]>([])
     const [errorMsg, setErrorMsg] = useState("")
     const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const videoRef = useRef<HTMLVideoElement>(null)
     const streamRef = useRef<MediaStream | null>(null)
@@ -349,6 +350,7 @@ export default function RecommendPage(props: RecommendPageProps) {
         const file = e.target.files?.[0]
         if (!file) return
         e.target.value = ""
+        setPreviewUrl(URL.createObjectURL(file))
         await runRecommend(file)
     }
 
@@ -366,6 +368,7 @@ export default function RecommendPage(props: RecommendPageProps) {
                 setPhase("error")
                 return
             }
+            setPreviewUrl(URL.createObjectURL(blob))
             await runRecommend(blob)
         }, "image/jpeg", 0.92)
     }
@@ -384,6 +387,8 @@ export default function RecommendPage(props: RecommendPageProps) {
     }
 
     const reset = () => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl)
+        setPreviewUrl(null)
         setItems([])
         setPhase("choose")
     }
@@ -407,47 +412,77 @@ export default function RecommendPage(props: RecommendPageProps) {
         ...baseContainer,
         alignItems: "center",
         justifyContent: "center",
-        minHeight: 500,
+        minHeight: 700,
         gap: 0,
     }
 
     if (phase === "choose") {
         return (
             <div style={centeredContainer}>
-                <h2 style={{ fontSize: 24, fontWeight: 700, color: "#111", margin: 0, textAlign: "center" }}>
+                <style>{`
+                    .uv-btn {
+                        padding: 15px 25px;
+                        border: unset;
+                        border-radius: 15px;
+                        color: #212121;
+                        z-index: 1;
+                        background: #e8e8e8;
+                        position: relative;
+                        font-weight: 1000;
+                        font-size: 17px;
+                        -webkit-box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+                        box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+                        transition: all 250ms;
+                        overflow: hidden;
+                        cursor: pointer;
+                    }
+                    .uv-btn::before {
+                        content: "";
+                        position: absolute;
+                        top: 0; left: 0;
+                        height: 100%; width: 0;
+                        border-radius: 15px;
+                        background-color: #212121;
+                        z-index: -1;
+                        -webkit-box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+                        box-shadow: 4px 8px 19px -3px rgba(0,0,0,0.27);
+                        transition: all 250ms;
+                    }
+                    .uv-btn:hover { color: #e8e8e8; }
+                    .uv-btn:hover::before { width: 100%; }
+                `}</style>
+                <h2 style={{
+                    fontFamily: "Anton, sans-serif",
+                    fontSize: 64,
+                    fontWeight: 400,
+                    color: "#111",
+                    margin: 0,
+                    textAlign: "center",
+                    textTransform: "uppercase",
+                    lineHeight: 0.9,
+                    letterSpacing: 0,
+                }}>
                     Find Your Match
                 </h2>
-                <p style={{ fontSize: 14, color: "#666", textAlign: "center", maxWidth: 320, margin: "8px 0 40px" }}>
+                <p style={{ fontSize: 16, color: "#444", textAlign: "center", maxWidth: 340, margin: "20px 0 40px", lineHeight: 1.5 }}>
                     Upload a fashion photo or take one now — we'll find the closest items from Egyptian stores.
                 </p>
                 <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
                     <motion.button
+                        className="uv-btn"
                         onClick={() => fileInputRef.current?.click()}
-                        style={{
-                            display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-                            padding: "28px 36px", borderRadius: 16, border: "2px solid #111",
-                            backgroundColor: "#111", color: "#fff", cursor: "pointer", minWidth: 140,
-                        }}
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
                     >
-                        <span style={{ fontSize: 32 }}>🖼️</span>
-                        <span style={{ fontWeight: 600, fontSize: 15 }}>Upload Photo</span>
-                        <span style={{ fontSize: 12, color: "#aaa" }}>JPG, PNG or WEBP</span>
+                        Upload Photo
                     </motion.button>
                     <motion.button
+                        className="uv-btn"
                         onClick={() => setPhase("camera")}
-                        style={{
-                            display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-                            padding: "28px 36px", borderRadius: 16, border: "2px solid #111",
-                            backgroundColor: "#fff", color: "#111", cursor: "pointer", minWidth: 140,
-                        }}
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
                     >
-                        <span style={{ fontSize: 32 }}>📷</span>
-                        <span style={{ fontWeight: 600, fontSize: 15 }}>Camera Capture</span>
-                        <span style={{ fontSize: 12, color: "#888" }}>Take a photo now</span>
+                        Camera Capture
                     </motion.button>
                 </div>
                 <input
@@ -486,6 +521,31 @@ export default function RecommendPage(props: RecommendPageProps) {
     if (phase === "loading") {
         return (
             <div style={centeredContainer}>
+                {previewUrl && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        style={{ position: "relative", marginBottom: 36 }}
+                    >
+                        <img
+                            src={previewUrl}
+                            alt="Your photo"
+                            style={{
+                                width: 210,
+                                height: 210,
+                                objectFit: "cover",
+                                borderRadius: 26,
+                                boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                                display: "block",
+                            }}
+                        />
+                        <motion.div
+                            animate={{ opacity: [0.3, 0.7, 0.3] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                            style={{ position: "absolute", inset: 0, borderRadius: 20, border: "3px solid #111" }}
+                        />
+                    </motion.div>
+                )}
                 <div style={{ width: 48, height: 48, border: "4px solid #eee", borderTop: "4px solid #111", borderRadius: "50%", animation: "spin 0.9s linear infinite", marginBottom: 20 }} />
                 <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
                 <p style={{ fontSize: 16, fontWeight: 600, color: "#111", margin: 0 }}>Analyzing outfit...</p>
@@ -523,6 +583,26 @@ export default function RecommendPage(props: RecommendPageProps) {
                     Search Again
                 </motion.button>
             </div>
+            {previewUrl && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, padding: "4px 0 8px" }}>
+                    <img
+                        src={previewUrl}
+                        alt="Your photo"
+                        style={{
+                            width: 160,
+                            height: 160,
+                            objectFit: "cover",
+                            borderRadius: 24,
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                            flexShrink: 0,
+                        }}
+                    />
+                    <div>
+                        <p style={{ margin: 0, fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Your photo</p>
+                        <p style={{ margin: "2px 0 0", fontSize: 13, color: "#555" }}>Showing closest matches</p>
+                    </div>
+                </div>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 20, width: "100%" }}>
                 <AnimatePresence>
                     {items.map((item, i) => (

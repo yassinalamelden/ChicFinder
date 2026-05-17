@@ -57,3 +57,6 @@ FrontEnd/dist/
 
 # MCP config (local only)
 .mcp.json
+
+# Claude Code (local config)
+.claude/
