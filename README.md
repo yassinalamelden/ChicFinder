@@ -11,7 +11,7 @@
 
 > **Upload a photo. Find the outfit. Shop Egyptian brands.**
 
-ChicFinder is an AI-powered fashion visual search system built for the Egyptian market. Users upload an outfit photo and receive visually similar, shoppable recommendations from local brands like Tomato, Town Team, LokalEG, and Barawy — powered by FashionCLIP embeddings, Supabase pgvector similarity search, and Gemini 2.5-flash Vision reranking.
+ChicFinder is an AI-powered fashion visual search system built for the Egyptian market. Users upload an outfit photo and receive visually similar, shoppable recommendations from local brands like Tomato, Town Team and LokalEG, — powered by FashionCLIP embeddings, Supabase pgvector similarity search, and Gemini 2.5-flash Vision reranking.
 
 ---
 
