@@ -12,7 +12,8 @@ python-multipart          # required for FastAPI file uploads (UploadFile)
 python-dotenv             # loads .env for API keys and config paths
 
 # --- AI & LLM Integration (Slice 2 — Moamen) ---------------
-openai>=1.0.0             # GPT-4o Vision: outfit parsing and reranking
+openai>=1.0.0             # GPT-4o Vision: outfit parsing and reranking (future pipeline)
+google-genai>=1.0.0       # Gemini Vision: active outfit parser (ai_engine/llm/outfit_parser.py)
 
 # --- AI & Embeddings (Slice 2 — Yassin, Amr, Moamen) -------
 torch>=2.1.1              # FashionCLIP backbone
@@ -33,3 +34,6 @@ tqdm                      # progress bars for offline indexing pipeline
 # --- Health Check & HTTP ------------------------------------
 requests>=2.31.0          # HTTP calls (health check, script downloads, image fetching)
 starlette>=0.27.0         # FastAPI depends on this; pinned for health check
+
+# --- Authentication -----------------------------------------
+firebase-admin>=6.0.0     # Firebase ID token verification (api/dependencies/auth.py)

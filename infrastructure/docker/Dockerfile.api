@@ -1,23 +1,51 @@
 FROM python:3.10-slim
 
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    # Disable CUDA — server runs FashionCLIP on CPU only
+    CUDA_VISIBLE_DEVICES="" \
+    # Cache HuggingFace models inside the image layer when pre-warming
+    TRANSFORMERS_CACHE=/app/.cache/huggingface \
+    HF_HOME=/app/.cache/huggingface
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+# System deps for OpenCV + Pillow + build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgl1 \
     libglib2.0-0 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# ── Install Python deps in two layers for better cache reuse ──────────────────
+# Layer 1: CPU-only PyTorch (heaviest dep, changes rarely)
+# Using +cpu wheel cuts torch from ~2.3 GB → ~0.7 GB
+RUN pip install --no-cache-dir \
+    torch==2.4.0+cpu \
+    torchvision==0.19.0+cpu \
+    --extra-index-url https://download.pytorch.org/whl/cpu
 
+# Layer 2: All remaining deps
+COPY requirements.txt .
+# Remove torch/torchvision from requirements before installing to avoid
+# re-downloading the full CUDA wheel over the +cpu one we already installed
+RUN grep -v -E "^torch(vision)?" requirements.txt > requirements_no_torch.txt \
+    && pip install --no-cache-dir -r requirements_no_torch.txt \
+    && rm requirements_no_torch.txt
+
+# ── Application source ────────────────────────────────────────────────────────
 COPY . .
+
+# Ensure uploads directory exists
+RUN mkdir -p uploads
+
+COPY start.sh .
+RUN chmod +x start.sh
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" || exit 1
+HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-8000}/api/v1/health || exit 1
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./start.sh"]

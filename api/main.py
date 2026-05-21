@@ -19,13 +19,19 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from api.routes import recommend, health, search, stores
 from api.middleware.logging import LoggingMiddleware
 from chic_finder.config import settings
 
+# Configure structured logging so Railway log viewer captures everything
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +40,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Ensure uploads dir exists. All data is now in Supabase."""
     Path("uploads").mkdir(parents=True, exist_ok=True)
 
@@ -103,5 +109,5 @@ app.mount("/uploads", StaticFiles(directory=str(_UPLOADS_DIR)), name="uploads")
 # ---------------------------------------------------------------------------
 
 @app.get("/")
-async def serve_frontend():
-    return FileResponse("index.html")
+async def root():
+    return JSONResponse({"service": "ChicFinder API", "docs": "/docs", "health": "/api/v1/health"})

@@ -1,5 +1,4 @@
 import uuid
-import os
 import io
 import logging
 from pathlib import Path
@@ -14,13 +13,11 @@ from chic_finder.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Force CPU mode to avoid VRAM crashes
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
-
 router = APIRouter()
 
 UPLOADS_DIR = Path("uploads")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 class RecommendedItem(BaseModel):
@@ -47,24 +44,28 @@ async def get_recommendations(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Invalid file type. Images only.")
 
     raw_bytes = await file.read()
+    if len(raw_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 10 MB.")
 
-    # 1. Sanitize image
+    # Sanitize: open as PIL to validate, then re-encode to PNG for storage
     try:
         img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
         _ensure_uploads_dir()
         saved_filename = f"{uuid.uuid4()}_clean.png"
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        clean_bytes = buf.getvalue()
         save_path = UPLOADS_DIR / saved_filename
-        img.save(save_path, format="PNG")
+        save_path.write_bytes(clean_bytes)
         query_url = f"/uploads/{saved_filename}"
     except Exception as e:
-        logger.error("Image sanitization failed: %s", str(e))
+        logger.error("Image sanitization failed: %s", e)
         raise HTTPException(status_code=400, detail="Invalid image format")
 
-    # 2. Encode + Supabase pgvector search
+    # Encode with public API, then vector search
     try:
         encoder = get_encoder()
-        raw_vector = encoder._encode(img)
-        query_vector = encoder._normalize(raw_vector)
+        query_vector = encoder.encode(clean_bytes)
 
         results = search_by_vector(query_vector, top_k=5)
 
