@@ -37,6 +37,11 @@ firebase-admin            # Server-side Firebase token verification
 requests>=2.31.0          # HTTP calls (health check, script downloads, image fetching)
 starlette>=0.27.0         # FastAPI depends on this; pinned for health check
 
-# --- Testing -------------------------------------------------
+# --- AWS data layer -------------------------------------------
+boto3
+psycopg2-binary
+
+# --- Testing (AWS mocking) -------------------------------------
 pytest
 pytest-asyncio
+moto[s3]
