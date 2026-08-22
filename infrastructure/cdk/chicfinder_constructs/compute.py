@@ -1,0 +1,95 @@
+from aws_cdk import Duration, aws_ec2 as ec2, aws_ecs as ecs, aws_ecs_patterns as ecs_patterns
+from aws_cdk import aws_s3 as s3, aws_secretsmanager as secretsmanager
+from constructs import Construct
+
+from chicfinder_constructs.database import Database
+from chicfinder_constructs.filesystem import Filesystem
+
+APP_SECRETS_NAME = "chicfinder/app-secrets"
+
+
+class Compute(Construct):
+    """ECS cluster + the always-on API Fargate service (EFS mounted read-only)."""
+
+    def __init__(
+        self,
+        scope: Construct,
+        construct_id: str,
+        vpc: ec2.IVpc,
+        bucket: s3.IBucket,
+        database: Database,
+        filesystem: Filesystem,
+        **kwargs,
+    ) -> None:
+        super().__init__(scope, construct_id, **kwargs)
+
+        self.cluster = ecs.Cluster(self, "Cluster", vpc=vpc)
+
+        app_secrets = secretsmanager.Secret.from_secret_name_v2(
+            self, "AppSecrets", APP_SECRETS_NAME
+        )
+
+        task_definition = ecs.FargateTaskDefinition(
+            self,
+            "ApiTaskDefinition",
+            cpu=1024,
+            memory_limit_mib=3072,
+        )
+        task_definition.add_volume(
+            name="faiss-index",
+            efs_volume_configuration=ecs.EfsVolumeConfiguration(
+                file_system_id=filesystem.file_system.file_system_id,
+                transit_encryption="ENABLED",
+                authorization_config=ecs.AuthorizationConfig(
+                    access_point_id=filesystem.access_point.access_point_id,
+                    iam="ENABLED",
+                ),
+            ),
+        )
+
+        container = task_definition.add_container(
+            "ApiContainer",
+            image=ecs.ContainerImage.from_asset(
+                directory="../..",
+                file="infrastructure/docker/Dockerfile.api",
+            ),
+            port_mappings=[ecs.PortMapping(container_port=8000)],
+            environment={
+                "APP_ENV": "production",
+                "DB_SECRET_ARN": database.secret.secret_arn,
+                "S3_BUCKET_NAME": bucket.bucket_name,
+            },
+            secrets={
+                "OPENROUTER_API_KEY": ecs.Secret.from_secrets_manager(
+                    app_secrets, "OPENROUTER_API_KEY"
+                ),
+                "FIREBASE_PROJECT_ID": ecs.Secret.from_secrets_manager(
+                    app_secrets, "FIREBASE_PROJECT_ID"
+                ),
+            },
+            logging=ecs.LogDriver.aws_logs(stream_prefix="chicfinder-api"),
+        )
+        container.add_mount_points(
+            ecs.MountPoint(
+                container_path="/mnt/faiss-index",
+                source_volume="faiss-index",
+                read_only=True,
+            )
+        )
+
+        self.api_service = ecs_patterns.ApplicationLoadBalancedFargateService(
+            self,
+            "ApiService",
+            cluster=self.cluster,
+            task_definition=task_definition,
+            desired_count=1,
+            public_load_balancer=True,
+            health_check_grace_period=Duration.seconds(120),
+        )
+        self.api_service.target_group.configure_health_check(path="/api/v1/health")
+
+        bucket.grant_read(task_definition.task_role)
+        database.secret.grant_read(task_definition.task_role)
+        app_secrets.grant_read(task_definition.task_role)
+        database.connections.allow_default_port_from(self.api_service.service)
+        filesystem.file_system.connections.allow_default_port_from(self.api_service.service)
