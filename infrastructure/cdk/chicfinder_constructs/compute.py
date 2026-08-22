@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from aws_cdk import Duration, aws_ec2 as ec2, aws_ecs as ecs, aws_ecs_patterns as ecs_patterns
 from aws_cdk import aws_iam as iam, aws_s3 as s3, aws_secretsmanager as secretsmanager
 from constructs import Construct
@@ -6,6 +8,12 @@ from chicfinder_constructs.database import Database
 from chicfinder_constructs.filesystem import Filesystem
 
 APP_SECRETS_NAME = "chicfinder/app-secrets"
+
+# Repo root, computed from this file's own location so the Docker build context
+# resolves correctly regardless of the directory `cdk synth`/`cdk deploy` is
+# invoked from (a cwd-relative "../.." would otherwise silently point at the
+# wrong directory when invoked from anywhere but infrastructure/cdk/).
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 class Compute(Construct):
@@ -51,7 +59,7 @@ class Compute(Construct):
         container = task_definition.add_container(
             "ApiContainer",
             image=ecs.ContainerImage.from_asset(
-                directory="../..",
+                directory=str(_REPO_ROOT),
                 file="infrastructure/docker/Dockerfile.api",
             ),
             port_mappings=[ecs.PortMapping(container_port=8000)],
@@ -135,7 +143,7 @@ class Compute(Construct):
         builder_container = self.builder_task_definition.add_container(
             "IndexBuilderContainer",
             image=ecs.ContainerImage.from_asset(
-                directory="../..",
+                directory=str(_REPO_ROOT),
                 file="infrastructure/docker/Dockerfile.api",
             ),
             command=["python", "scripts/02_build_faiss_index.py"],
