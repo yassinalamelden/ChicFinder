@@ -16,6 +16,7 @@ def test_get_items_by_ids_returns_dict_keyed_by_id():
         result = get_items_by_ids(["item1"])
 
     assert result == {"item1": {"id": "item1", "brand": "Tomato", "price": 350.0}}
+    fake_conn.rollback.assert_called_once()
     fake_pool.putconn.assert_called_once_with(fake_conn)
 
 

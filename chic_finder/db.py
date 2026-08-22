@@ -15,7 +15,6 @@ import json
 import os
 
 import boto3
-import psycopg2
 import psycopg2.pool
 
 _pool = None
@@ -59,7 +58,7 @@ def init_pool(minconn: int = 1, maxconn: int = 10) -> None:
         _pool = psycopg2.pool.SimpleConnectionPool(minconn, maxconn, **connection_kwargs_from_env())
 
 
-def get_pool():
+def get_pool() -> psycopg2.pool.SimpleConnectionPool:
     if _pool is None:
         raise RuntimeError(
             "DB pool not initialized — call init_pool() first (see api/main.py's lifespan)."
@@ -88,4 +87,5 @@ def get_items_by_ids(ids: list[str]) -> dict[str, dict]:
             columns = [desc[0] for desc in cursor.description]
             return {row[0]: dict(zip(columns, row)) for row in cursor.fetchall()}
     finally:
+        conn.rollback()
         pool.putconn(conn)
