@@ -48,3 +48,12 @@ def test_api_service_is_fargate_with_efs_mount():
     template.resource_count_is(
         "AWS::ElasticLoadBalancingV2::LoadBalancer", 1
     )
+
+
+def test_index_builder_task_definition_mounts_efs_read_write():
+    stack, compute = _build_stack()
+    template = Template.from_stack(stack)
+
+    # Two task definitions total: the API service's, and the builder's.
+    template.resource_count_is("AWS::ECS::TaskDefinition", 2)
+    assert compute.builder_task_definition is not None

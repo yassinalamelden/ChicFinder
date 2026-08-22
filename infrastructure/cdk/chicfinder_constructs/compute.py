@@ -93,3 +93,52 @@ class Compute(Construct):
         app_secrets.grant_read(task_definition.task_role)
         database.connections.allow_default_port_from(self.api_service.service)
         filesystem.file_system.connections.allow_default_port_from(self.api_service.service)
+
+        self.builder_task_definition = ecs.FargateTaskDefinition(
+            self,
+            "IndexBuilderTaskDefinition",
+            cpu=2048,
+            memory_limit_mib=8192,
+        )
+        self.builder_task_definition.add_volume(
+            name="faiss-index",
+            efs_volume_configuration=ecs.EfsVolumeConfiguration(
+                file_system_id=filesystem.file_system.file_system_id,
+                transit_encryption="ENABLED",
+                authorization_config=ecs.AuthorizationConfig(
+                    access_point_id=filesystem.access_point.access_point_id,
+                    iam="ENABLED",
+                ),
+            ),
+        )
+
+        builder_container = self.builder_task_definition.add_container(
+            "IndexBuilderContainer",
+            image=ecs.ContainerImage.from_asset(
+                directory="../..",
+                file="infrastructure/docker/Dockerfile.api",
+            ),
+            command=["python", "scripts/02_build_faiss_index.py"],
+            environment={
+                "APP_ENV": "production",
+                "DB_SECRET_ARN": database.secret.secret_arn,
+                "S3_BUCKET_NAME": bucket.bucket_name,
+            },
+            logging=ecs.LogDriver.aws_logs(stream_prefix="chicfinder-index-builder"),
+        )
+        builder_container.add_mount_points(
+            ecs.MountPoint(
+                container_path="/mnt/faiss-index",
+                source_volume="faiss-index",
+                read_only=False,
+            )
+        )
+
+        bucket.grant_read(self.builder_task_definition.task_role)
+        database.secret.grant_read(self.builder_task_definition.task_role)
+
+        self.builder_security_group = ec2.SecurityGroup(
+            self, "IndexBuilderSecurityGroup", vpc=vpc, allow_all_outbound=True
+        )
+        database.connections.allow_default_port_from(self.builder_security_group)
+        filesystem.file_system.connections.allow_default_port_from(self.builder_security_group)
