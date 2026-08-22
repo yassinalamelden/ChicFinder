@@ -30,8 +30,10 @@ async def get_current_user(authorization: str = Header(default=None)) -> dict:
         if user:
             return user
 
-    # Only enforce auth in production when Firebase credentials are actually configured
-    if settings.APP_ENV == "production" and settings.FIREBASE_CREDENTIALS_PATH:
+    # In production, always require a verified token — never fall back to the
+    # dev stub, even if Firebase credentials aren't configured. A missing
+    # credential should make auth fail closed, not silently permit everyone.
+    if settings.APP_ENV == "production":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing authentication token",
