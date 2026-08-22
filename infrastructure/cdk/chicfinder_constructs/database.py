@@ -22,6 +22,7 @@ class Database(Construct):
             database_name="chicfinder",
             credentials=rds.Credentials.from_generated_secret("chicfinder_admin"),
             allocated_storage=20,
+            storage_encrypted=True,
             removal_policy=RemovalPolicy.RETAIN,
         )
         self.secret = self.instance.secret

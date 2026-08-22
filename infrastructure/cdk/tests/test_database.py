@@ -19,4 +19,5 @@ def test_database_is_postgres_in_private_subnet_with_generated_secret():
     template = Template.from_stack(stack)
     template.resource_count_is("AWS::RDS::DBInstance", 1)
     template.has_resource_properties("AWS::RDS::DBInstance", {"Engine": "postgres"})
+    template.has_resource_properties("AWS::RDS::DBInstance", {"StorageEncrypted": True})
     template.resource_count_is("AWS::SecretsManager::Secret", 1)
