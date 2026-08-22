@@ -2,6 +2,7 @@ from aws_cdk import Stack
 from constructs import Construct
 
 from chicfinder_constructs.networking import Networking
+from chicfinder_constructs.storage import Storage
 
 
 class ChicFinderStack(Stack):
@@ -9,3 +10,4 @@ class ChicFinderStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.networking = Networking(self, "Networking")
+        self.storage = Storage(self, "Storage")
