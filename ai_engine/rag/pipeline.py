@@ -180,9 +180,9 @@ class RAGPipeline:
                 len(candidates),
                 self.top_x_rerank,
             )
-            candidate_images = [
-                self._fetch_image(item.image_url) for item in candidates
-            ]
+            candidate_images = await asyncio.gather(
+                *[run_in_threadpool(self._fetch_image, item.image_url) for item in candidates]
+            )
             valid_pairs = [
                 (img, item)
                 for img, item in zip(candidate_images, candidates)
