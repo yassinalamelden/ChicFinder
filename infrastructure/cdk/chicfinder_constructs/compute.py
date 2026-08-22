@@ -1,5 +1,5 @@
 from aws_cdk import Duration, aws_ec2 as ec2, aws_ecs as ecs, aws_ecs_patterns as ecs_patterns
-from aws_cdk import aws_s3 as s3, aws_secretsmanager as secretsmanager
+from aws_cdk import aws_iam as iam, aws_s3 as s3, aws_secretsmanager as secretsmanager
 from constructs import Construct
 
 from chicfinder_constructs.database import Database
@@ -9,7 +9,8 @@ APP_SECRETS_NAME = "chicfinder/app-secrets"
 
 
 class Compute(Construct):
-    """ECS cluster + the always-on API Fargate service (EFS mounted read-only)."""
+    """ECS cluster + the always-on API Fargate service (EFS mounted read-only)
+    and the index-builder Fargate task definition (EFS mounted read-write)."""
 
     def __init__(
         self,
@@ -91,6 +92,25 @@ class Compute(Construct):
         bucket.grant_read(task_definition.task_role)
         database.secret.grant_read(task_definition.task_role)
         app_secrets.grant_read(task_definition.task_role)
+        # NOTE: deliberately not using efs.FileSystem.grant_read() here. That helper has a
+        # side effect: it flips FileSystem's internal "granted client" flag, which makes CDK
+        # auto-attach a *separate* file-system resource policy statement granting
+        # ClientWrite + ClientRootAccess to Principal "*" (AnyPrincipal) whenever
+        # AccessedViaMountTarget is true. Per AWS's EFS docs, an allow in *either* an identity
+        # policy *or* the resource policy grants that action - so that auto-added statement
+        # would independently hand this read-only role write/root access, defeating the
+        # read-only intent. A manual statement scoped to this access point avoids that.
+        task_definition.task_role.add_to_principal_policy(
+            iam.PolicyStatement(
+                actions=["elasticfilesystem:ClientMount"],
+                resources=[filesystem.file_system.file_system_arn],
+                conditions={
+                    "StringEquals": {
+                        "elasticfilesystem:AccessPointArn": filesystem.access_point.access_point_arn
+                    }
+                },
+            )
+        )
         database.connections.allow_default_port_from(self.api_service.service)
         filesystem.file_system.connections.allow_default_port_from(self.api_service.service)
 
@@ -136,6 +156,19 @@ class Compute(Construct):
 
         bucket.grant_read(self.builder_task_definition.task_role)
         database.secret.grant_read(self.builder_task_definition.task_role)
+        # See the API task role's grant above for why this is a manual PolicyStatement
+        # rather than efs.FileSystem.grant_read_write().
+        self.builder_task_definition.task_role.add_to_principal_policy(
+            iam.PolicyStatement(
+                actions=["elasticfilesystem:ClientMount", "elasticfilesystem:ClientWrite"],
+                resources=[filesystem.file_system.file_system_arn],
+                conditions={
+                    "StringEquals": {
+                        "elasticfilesystem:AccessPointArn": filesystem.access_point.access_point_arn
+                    }
+                },
+            )
+        )
 
         self.builder_security_group = ec2.SecurityGroup(
             self, "IndexBuilderSecurityGroup", vpc=vpc, allow_all_outbound=True

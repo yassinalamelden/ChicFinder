@@ -57,3 +57,39 @@ def test_index_builder_task_definition_mounts_efs_read_write():
     # Two task definitions total: the API service's, and the builder's.
     template.resource_count_is("AWS::ECS::TaskDefinition", 2)
     assert compute.builder_task_definition is not None
+
+    # The builder's container mount point must be read-write (ReadOnly: False).
+    template.has_resource_properties(
+        "AWS::ECS::TaskDefinition",
+        {
+            "ContainerDefinitions": Match.array_with(
+                [
+                    Match.object_like(
+                        {
+                            "MountPoints": Match.array_with(
+                                [
+                                    Match.object_like(
+                                        {
+                                            "ContainerPath": "/mnt/faiss-index",
+                                            "ReadOnly": False,
+                                        }
+                                    )
+                                ]
+                            )
+                        }
+                    )
+                ]
+            )
+        },
+    )
+
+    # The builder gets its own, distinct EC2 security group (not reused from the API service).
+    template.has_resource_properties(
+        "AWS::EC2::SecurityGroup",
+        {"GroupDescription": Match.string_like_regexp(".*IndexBuilderSecurityGroup.*")},
+    )
+    assert compute.builder_security_group is not None
+    assert (
+        compute.builder_security_group.security_group_id
+        != compute.api_service.service.connections.security_groups[0].security_group_id
+    )
