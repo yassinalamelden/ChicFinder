@@ -13,6 +13,7 @@ class Filesystem(Construct):
             "FaissIndexVolume",
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+            encrypted=True,
             removal_policy=RemovalPolicy.RETAIN,
         )
 

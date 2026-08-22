@@ -19,3 +19,4 @@ def test_efs_filesystem_and_access_point_exist():
     template = Template.from_stack(stack)
     template.resource_count_is("AWS::EFS::FileSystem", 1)
     template.resource_count_is("AWS::EFS::AccessPoint", 1)
+    template.has_resource_properties("AWS::EFS::FileSystem", {"Encrypted": True})
