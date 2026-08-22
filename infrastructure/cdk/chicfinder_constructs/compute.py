@@ -91,7 +91,7 @@ class Compute(Construct):
             "ApiService",
             cluster=self.cluster,
             task_definition=task_definition,
-            desired_count=1,
+            desired_count=2,
             public_load_balancer=True,
             health_check_grace_period=Duration.seconds(120),
         )
