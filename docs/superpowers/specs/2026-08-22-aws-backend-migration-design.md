@@ -106,7 +106,7 @@ One AWS CDK (Python) stack, per the project's standing AWS guidance (prefer CDK/
 
 ### CI/CD
 
-Extend the existing `.github/workflows/ci.yml`: build the API image, push to ECR, update the Fargate service. Same trigger model (push to a deploy branch) as whatever's already configured there.
+There is no existing `.github/workflows/` directory on this branch (an earlier assumption that one existed, carried from `origin/main`'s README, was wrong). Create a new GitHub Actions workflow: build the API image, push to ECR, update the Fargate service, triggered on push to the deploy branch.
 
 ## Performance
 
