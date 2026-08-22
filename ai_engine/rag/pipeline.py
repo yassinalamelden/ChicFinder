@@ -34,10 +34,10 @@ class RAGPipeline:
     RAGPipeline: end-to-end outfit → recommendations orchestrator.
 
     Pipeline Steps:
-        1. LLM outfit parsing    (OutfitParser / GPT-4o Vision)
+        1. LLM outfit parsing    (OutfitParser / Gemini via OpenRouter)
         2. Query encoding        (FashionCLIPEncoder / CLIP ViT-B/32, 512-dim)
         3. KNN retrieval         (Retriever → FAISSVectorStore)
-        4. Vision reranking      (VisionReranker / GPT-4o Vision)
+        4. Vision reranking      (VisionReranker / Gemini via OpenRouter)
         5. Result construction   (typed Recommendation objects)
 
     All components are lazily evaluated via properties so the class can be

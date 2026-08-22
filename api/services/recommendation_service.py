@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from ai_engine.rag.pipeline import RAGPipeline
 from shared.utils.image_utils import bytes_to_image
 from api.models.schemas import RecommendationResponse, RecommendedItem
@@ -41,5 +41,17 @@ class RecommendationService:
                 query_item=res.query_item,
                 recommendations=recommendations_list
             ))
-            
+
         return response
+
+
+_service_instance: Optional["RecommendationService"] = None
+
+
+def get_recommendation_service() -> "RecommendationService":
+    """Lazily construct the singleton so a missing/invalid GEMINI_API_KEY
+    only fails a request, not app startup."""
+    global _service_instance
+    if _service_instance is None:
+        _service_instance = RecommendationService()
+    return _service_instance

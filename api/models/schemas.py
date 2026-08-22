@@ -1,5 +1,21 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
+
+
+class RecommendedItem(BaseModel):
+    id: str
+    category: str
+    sub_category: Optional[str] = None
+    color: Optional[str] = None
+    style: Optional[str] = None
+    image_url: str
+    brand: Optional[str] = None
+    price: Optional[float] = None
+
+
+class RecommendationResponse(BaseModel):
+    query_item: Dict[str, Any]
+    recommendations: List[RecommendedItem]
 
 
 class ChicFinderResult(BaseModel):

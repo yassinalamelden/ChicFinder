@@ -1,5 +1,5 @@
 """
-reranker.py — Gemini Vision-based candidate reranking.
+reranker.py — Gemini Vision-based candidate reranking, via OpenRouter.
 
 Given a query outfit image and a list of candidate product images, uses Gemini
 to produce a fine-grained ranking ordered by visual+stylistic similarity.
@@ -9,11 +9,12 @@ import json
 import logging
 from typing import List
 
-from google import genai
-from google.genai import types
+from openai import OpenAI
 from PIL import Image
 
 from chic_finder.config import settings
+from shared.utils.image_utils import image_to_data_url
+from ai_engine.llm.outfit_parser import strip_json_fences
 from ai_engine.llm.prompt_builder import (
     RERANK_SYSTEM,
     build_rerank_user_message,
@@ -25,9 +26,9 @@ MAX_CANDIDATES_PER_CALL = 10
 
 class VisionReranker:
     def __init__(self, api_key: str = None, model: str = None):
-        self.api_key = api_key or settings.GEMINI_API_KEY
-        self.model = model or settings.GEMINI_MODEL
-        self._client = genai.Client(api_key=self.api_key)
+        self.api_key = api_key or settings.OPENROUTER_API_KEY
+        self.model = model or settings.OPENROUTER_MODEL
+        self._client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=self.api_key)
 
     def rerank(
         self,
@@ -53,27 +54,30 @@ class VisionReranker:
         candidates: List[Image.Image],
     ) -> List[int]:
         logger.info(
-            "VisionReranker._rerank_batch() — %d candidates, calling Gemini…",
+            "VisionReranker._rerank_batch() — %d candidates, calling OpenRouter…",
             len(candidates),
         )
 
-        # Build contents array for Gemini: prompt + query image + candidates
-        contents = [build_rerank_user_message(len(candidates)), query_image]
-        contents.extend(candidates)
+        # Build content array: prompt text + query image + candidate images
+        content = [{"type": "text", "text": build_rerank_user_message(len(candidates))}]
+        content.append({"type": "image_url", "image_url": {"url": image_to_data_url(query_image)}})
+        for candidate in candidates:
+            content.append({"type": "image_url", "image_url": {"url": image_to_data_url(candidate)}})
 
         try:
-            response = self._client.models.generate_content(
+            response = self._client.chat.completions.create(
                 model=self.model,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=RERANK_SYSTEM,
-                    temperature=0.0,
-                    response_mime_type="application/json",
-                )
+                messages=[
+                    {"role": "system", "content": RERANK_SYSTEM},
+                    {"role": "user", "content": content},
+                ],
+                temperature=0.0,
+                max_tokens=8000,
+                response_format={"type": "json_object"},
             )
-            raw_text = response.text.strip()
-            logger.debug("Gemini raw rerank response: %s", raw_text)
-            
+            raw_text = strip_json_fences(response.choices[0].message.content)
+            logger.debug("OpenRouter raw rerank response: %s", raw_text)
+
             parsed = json.loads(raw_text)
             ranking = parsed.get("ranking", [])
 
@@ -85,7 +89,7 @@ class VisionReranker:
             return [int(i) for i in ranking]
 
         except Exception as exc:
-            logger.error("VisionReranker Gemini API call failed: %s", exc)
+            logger.error("VisionReranker OpenRouter API call failed: %s", exc)
             return list(range(len(candidates)))
 
     def _rerank_multi_batch(

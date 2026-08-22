@@ -16,9 +16,9 @@ class Config:
     PROJECT_NAME: str = "ChicFinder"
     APP_ENV: str = field(default_factory=lambda: os.getenv("APP_ENV", "development"))
     
-    # AI Model Settings
-    GEMINI_API_KEY: str = field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
-    GEMINI_MODEL: str = "gemini-2.5-flash" #
+    # AI Model Settings (Gemini via OpenRouter's OpenAI-compatible API)
+    OPENROUTER_API_KEY: str = field(default_factory=lambda: os.getenv("OPENROUTER_API_KEY", ""))
+    OPENROUTER_MODEL: str = field(default_factory=lambda: os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash"))
     
     # AI Engine Settings
     MARQO_URL: str = field(default_factory=lambda: os.getenv("MARQO_URL", "http://localhost:8882"))
