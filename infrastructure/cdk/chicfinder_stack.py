@@ -4,6 +4,7 @@ from constructs import Construct
 from chicfinder_constructs.networking import Networking
 from chicfinder_constructs.storage import Storage
 from chicfinder_constructs.database import Database
+from chicfinder_constructs.filesystem import Filesystem
 
 
 class ChicFinderStack(Stack):
@@ -13,3 +14,4 @@ class ChicFinderStack(Stack):
         self.networking = Networking(self, "Networking")
         self.storage = Storage(self, "Storage")
         self.database = Database(self, "Database", vpc=self.networking.vpc)
+        self.filesystem = Filesystem(self, "Filesystem", vpc=self.networking.vpc)
