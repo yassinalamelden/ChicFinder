@@ -23,22 +23,7 @@ cd ..
 
 ## Running Development Servers
 
-### Option 1: Using Startup Scripts (Recommended)
-
-**Windows:**
-```bash
-dev-server.bat
-```
-
-**macOS/Linux:**
-```bash
-chmod +x dev-server.sh
-./dev-server.sh
-```
-
-This will start both servers and open them in separate terminal windows.
-
-### Option 2: Manual Startup
+Run each server in its own terminal:
 
 **Terminal 1 - Backend (FastAPI on port 8000):**
 ```bash

@@ -17,7 +17,7 @@ def main():
     # ---------------------------------------------------------
     # 1. Run the test with our local FAISS data
     # ---------------------------------------------------------
-    image_path = r"D:\workstation\ChicFinder\dataset\photo-1618354691373-d851c5c3a990.jpg"
+    image_path = os.path.join(os.path.dirname(__file__), "..", "data", "raw_images", "adidas_019_0.jpg")
     print(f"Loading test image ({image_path})...")
     
     try:

@@ -4,32 +4,26 @@ Deep learning-based intelligent expert system for outfit recommendations, based 
 
 ## Tech Stack
 - **Backend API**: FastAPI + Uvicorn
-- **Frontend**: Streamlit
-- **AI Engine**: PyTorch, Transformers (ViT-B / SETR), VGG-16, FAISS, OpenAI GPT-4o
-- **Infra**: Docker, docker-compose, Nginx
+- **Frontend**: Next.js (React) — `FrontEnd/`
+- **AI Engine**: FashionCLIP (CLIP ViT-B/32) embeddings, FAISS vector search, Gemini (via OpenRouter) for outfit parsing + reranking
+- **Auth**: Firebase
 
 ## Getting Started
 
-### 1. Setup Environment
-```bash
-cp .env.example .env
-# Fill in your OPENAI_API_KEY in .env
-```
+See [DEVELOPMENT.md](DEVELOPMENT.md) for full setup and local-dev instructions (installing dependencies, running both servers, environment variables, troubleshooting).
 
-### 2. Run with Docker
+Quick version:
 ```bash
-cd infrastructure/docker
-docker-compose up --build
-```
+pip install -r requirements.txt
+cd FrontEnd && npm install && cd ..
+cp .env.example .env   # fill in OPENROUTER_API_KEY and Firebase settings
 
-### 3. Local Development
-```bash
-# Backend
-uvicorn api.main:app --reload
-
-# Frontend
-streamlit run frontend/app.py
+# Two terminals:
+python -m uvicorn api.main:app --reload   # backend, port 8000
+cd FrontEnd && npm run dev                # frontend, port 3000
 ```
 
 ## Architecture
-See [docs/architecture.md](docs/architecture.md) for detailed pipeline flow.
+See [docs/architecture.md](docs/architecture.md) for the pipeline flow.
+
+> **Note:** `infrastructure/docker/docker-compose.yml` predates the Next.js migration and still targets the old Streamlit frontend (port 8501) — it hasn't been updated yet. Use the manual setup above until it's revisited.
