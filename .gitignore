@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
 # Virtual environments
 venv/
@@ -16,20 +20,33 @@ env/
 
 # Machine Learning / Data
 data/
-models/
+/models/
 *.pt
 *.pth
 *.h5
 *.onnx
+*.index
+*.faiss
 uploads/
 scrapers/
 
 # OS / IDE
 .DS_Store
+Thumbs.db
 .vscode/
 .idea/
 node_modules/
 **/node_modules/
+
+# Logs
+*.log
+
+# Personal / vault files (not part of the shared repo)
+.obsidian/
+CLAUDE.md
+COMMANDS.md
+ChicFinder-Master-Plan.md
+(C) ChicFinder-Vision-Map.html
 
 # Build / cache
 dist/
