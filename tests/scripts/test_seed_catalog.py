@@ -99,3 +99,40 @@ def test_seed_catalog_wipes_existing_data_first_when_requested(sample_catalog):
         call for call in fake_cursor.execute.call_args_list if "TRUNCATE" in call.args[0]
     ]
     assert len(truncate_calls) == 1
+
+
+@mock_aws
+def test_seed_catalog_wipes_large_catalog_with_pagination(sample_catalog):
+    """Test that wipe correctly handles S3 buckets with >1000 objects via pagination."""
+    images_dir, metadata_path = sample_catalog
+
+    s3 = boto3.client("s3", region_name="us-east-1")
+    s3.create_bucket(Bucket="test-chicfinder-catalog")
+
+    # Upload 1050 dummy objects to trigger pagination (list_objects_v2 returns max 1000 per page)
+    for i in range(1050):
+        s3.put_object(Bucket="test-chicfinder-catalog", Key=f"old_item_{i:04d}.jpg", Body=b"stale")
+
+    fake_cursor = MagicMock()
+    fake_conn = MagicMock()
+    fake_conn.cursor.return_value.__enter__.return_value = fake_cursor
+
+    seed_catalog(
+        images_dir=images_dir,
+        metadata_path=metadata_path,
+        bucket_name="test-chicfinder-catalog",
+        db_connection=fake_conn,
+        wipe=True,
+    )
+
+    # Verify that all old objects were deleted and only the new item remains
+    remaining = s3.list_objects_v2(Bucket="test-chicfinder-catalog")
+    remaining_keys = [obj["Key"] for obj in remaining.get("Contents", [])]
+
+    # Check that no old_item_* keys remain
+    old_items = [key for key in remaining_keys if key.startswith("old_item_")]
+    assert len(old_items) == 0, f"Expected all old items to be deleted, but found {len(old_items)}"
+
+    # Check that only the new item is present
+    assert "item1.jpg" in remaining_keys
+    assert len(remaining_keys) == 1

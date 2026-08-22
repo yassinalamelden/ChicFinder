@@ -69,9 +69,10 @@ def seed_catalog(images_dir: Path, metadata_path: Path, bucket_name: str, db_con
 
         if wipe:
             logger.info("Wiping existing catalog (S3 bucket contents + items table)...")
-            existing = s3.list_objects_v2(Bucket=bucket_name)
-            for obj in existing.get("Contents", []):
-                s3.delete_object(Bucket=bucket_name, Key=obj["Key"])
+            paginator = s3.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=bucket_name):
+                for obj in page.get("Contents", []):
+                    s3.delete_object(Bucket=bucket_name, Key=obj["Key"])
             cursor.execute("TRUNCATE items;")
 
         for item_id, record in metadata.items():
