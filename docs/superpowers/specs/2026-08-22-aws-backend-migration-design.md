@@ -18,6 +18,10 @@ This also resolves the architectural ambiguity flagged in `ChicFinder-Master-Pla
 - Response latency stays low — the design shouldn't introduce new latency, and one known existing latency risk gets fixed as part of this work.
 - Infrastructure is defined as code (CDK), not manual console clicks, so it's reproducible and reviewable.
 
+## Prerequisites
+
+- **AWS Agent Toolkit set up for this project** — following [the official setup instructions](https://raw.githubusercontent.com/aws/agent-toolkit-for-aws/refs/heads/main/setup-instructions/setup.md): AWS CLI v2, `aws login`, `aws configure agent-toolkit`, and the AWS MCP Server connection so Claude has direct AWS skill/MCP access for the CDK and deployment work below. (Already installed globally per prior setup on 2026-07-26 — this step is about confirming it's correctly configured/authenticated for whichever AWS account and region this project's resources will actually live in, not a from-scratch install.)
+
 ## Architecture
 
 ```
