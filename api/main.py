@@ -35,6 +35,20 @@ async def lifespan(app: FastAPI):
     # Ensure uploads dir exists
     Path("uploads").mkdir(parents=True, exist_ok=True)
 
+    # Initialize the RDS connection pool (item metadata enrichment for /search).
+    # Non-fatal: a machine without DB_* / DB_SECRET_ARN configured still boots;
+    # only /search's enrichment will fail until it's set.
+    try:
+        from chic_finder.db import init_pool
+
+        init_pool()
+        logger.info("RDS connection pool initialized.")
+    except Exception as exc:
+        logger.warning(
+            "RDS connection pool not initialized — /search enrichment will fail "
+            "until DB_* env vars or DB_SECRET_ARN are set. %s", exc
+        )
+
     # Pre-warm the FAISSVectorStore (skipped gracefully if not built yet)
     # DEV: Disabled for local development
     # try:
@@ -62,19 +76,6 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("products.json not found at project root")
 
-    # Load data/metadata.json (used by /search route)
-    app.state.metadata = {}
-    metadata_path = Path("data/metadata.json")
-    if metadata_path.exists():
-        try:
-            with open(metadata_path, "r", encoding="utf-8") as f:
-                app.state.metadata = json.load(f)
-                logger.info("Loaded %d products from data/metadata.json", len(app.state.metadata))
-        except Exception as exc:
-            logger.error("Failed to load metadata.json: %s", exc)
-    else:
-        logger.warning("data/metadata.json not found — /search will return empty results until built.")
-
     # Load stores.json
     app.state.stores = []
     app.state.stores_lookup = {}
@@ -92,6 +93,10 @@ async def lifespan(app: FastAPI):
         logger.warning("stores.json not found at project root")
 
     yield  # application runs here
+
+    from chic_finder.db import close_pool
+
+    close_pool()
 
 # ---------------------------------------------------------------------------
 # Application

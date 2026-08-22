@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 # Import the standalone function from your vector store
 from ai_engine.embeddings.vector_store import search_similar_items
 from api.dependencies.auth import get_current_user
+from chic_finder.db import get_items_by_ids
 
 router = APIRouter()
 
@@ -42,7 +43,6 @@ async def search_endpoint(
     user: dict = Depends(get_current_user),
 ):
     start_time = time.time()
-    metadata = getattr(fastapi_req.app.state, "metadata", {})
 
     try:
         # 1. Clean the string (removes hidden newlines or spaces from copy-pasting)
@@ -73,7 +73,10 @@ async def search_endpoint(
     try:
         # Increase top_k to allow enough items after filtering
         search_results = await run_in_threadpool(search_similar_items, image_bytes, top_k=50)
-        
+
+        candidate_ids = [str(item.get("id", "")).replace(".jpg", "") for item in search_results]
+        metadata = await run_in_threadpool(get_items_by_ids, candidate_ids)
+
         response_items = []
         seen_product_ids = set()
         desired_results = 5
