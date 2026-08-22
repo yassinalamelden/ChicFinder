@@ -97,7 +97,7 @@ async def get_recommendations(
     # ─── GEMINI RAG PIPELINE (OutfitParser + FashionCLIP + VisionReranker) ───
     try:
         service = get_recommendation_service()
-        rag_responses = service.process_recommendation(raw_bytes)
+        rag_responses = await service.process_recommendation(raw_bytes)
         if rag_responses:
             return {
                 "success": True,

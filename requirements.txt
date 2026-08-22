@@ -36,3 +36,7 @@ firebase-admin            # Server-side Firebase token verification
 # --- Health Check & HTTP ------------------------------------
 requests>=2.31.0          # HTTP calls (health check, script downloads, image fetching)
 starlette>=0.27.0         # FastAPI depends on this; pinned for health check
+
+# --- Testing -------------------------------------------------
+pytest
+pytest-asyncio

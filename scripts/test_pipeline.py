@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import os
 
@@ -28,7 +29,7 @@ def main():
          
     print("Running pipeline test...")
     try:
-        results = pipeline.run(query_image)
+        results = asyncio.run(pipeline.run(query_image))
         import json
         with open("data/metadata.json", "r") as f:
             metadata = json.load(f)

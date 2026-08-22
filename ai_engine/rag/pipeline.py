@@ -11,6 +11,7 @@ Note: This version uses the FashionCLIP encoder (Yassin, Slice 2) and the
 FAISS vector store already integrated into ai_engine/embeddings.
 """
 
+import asyncio
 import io
 import logging
 from pathlib import Path
@@ -18,6 +19,7 @@ from typing import List, Optional
 
 import requests
 from PIL import Image
+from starlette.concurrency import run_in_threadpool
 
 from ai_engine.embeddings.encoder import get_encoder
 from ai_engine.embeddings.vector_store import FAISSVectorStore
@@ -104,7 +106,7 @@ class RAGPipeline:
     # Public API
     # ------------------------------------------------------------------
 
-    def run(self, query_image: Image.Image) -> List[Recommendation]:
+    async def run(self, query_image: Image.Image) -> List[Recommendation]:
         """
         Executes the full RAG pipeline on the given outfit image.
 
@@ -117,7 +119,6 @@ class RAGPipeline:
               - query_item: dict with the parsed item metadata
               - suggestions: List[ClothingItem] ordered by relevance
         """
-        # ── Step 1: LLM outfit parsing ────────────────────────────────
         logger.info("RAGPipeline Step 1: LLM outfit parsing…")
         items_meta = self.parser.parse(query_image)
 
@@ -127,79 +128,81 @@ class RAGPipeline:
 
         logger.info("RAGPipeline: %d item(s) detected.", len(items_meta))
 
-        # ── Step 2: Encode the query image once (reused for all items) ─
         logger.info("RAGPipeline Step 2: Query encoding with FashionCLIP…")
         encoder = get_encoder()
         image_bytes = self._pil_to_bytes(query_image)
         query_vector = encoder.encode(image_bytes)
 
-        recommendations: List[Recommendation] = []
+        logger.info(
+            "RAGPipeline Steps 3+4: retrieving and reranking %d item(s) concurrently…",
+            len(items_meta),
+        )
+        recommendations = await asyncio.gather(
+            *[
+                self._process_item(item_meta, query_image, query_vector)
+                for item_meta in items_meta
+            ]
+        )
+        return list(recommendations)
 
-        for item_meta in items_meta:
-            item_type = item_meta.get("type", "clothing")
-            item_color = item_meta.get("color", "")
-            item_style = item_meta.get("style", "")
-            logger.info(
-                "RAGPipeline: processing item → %s %s %s",
-                item_color, item_style, item_type,
-            )
+    async def _process_item(
+        self,
+        item_meta: dict,
+        query_image: Image.Image,
+        query_vector,
+    ) -> Recommendation:
+        item_type = item_meta.get("type", "clothing")
+        item_color = item_meta.get("color", "")
+        item_style = item_meta.get("style", "")
+        logger.info(
+            "RAGPipeline: processing item → %s %s %s",
+            item_color, item_style, item_type,
+        )
 
-            # ── Step 3: KNN retrieval ─────────────────────────────────
-            logger.info("RAGPipeline Step 3: KNN retrieval (top %d)…", self.top_k_retrieve)
-            candidates: List[ClothingItem] = self.retriever.retrieve_candidates(
-                query_vector, top_k=self.top_k_retrieve
-            )
+        logger.info("RAGPipeline Step 3: KNN retrieval (top %d)…", self.top_k_retrieve)
+        candidates: List[ClothingItem] = self.retriever.retrieve_candidates(
+            query_vector, top_k=self.top_k_retrieve
+        )
 
-            if not candidates:
-                logger.warning(
-                    "RAGPipeline: no candidates retrieved for item '%s'. "
-                    "Is the FAISS database built? Run build_database first.",
-                    item_type,
-                )
-                recommendations.append(
-                    Recommendation(query_item=item_meta, suggestions=[])
-                )
-                continue
-
-            # ── Step 4: Vision reranking ──────────────────────────────
-            if self.skip_reranking or len(candidates) <= self.top_x_rerank:
-                top_items = candidates[: self.top_x_rerank]
-            else:
-                logger.info(
-                    "RAGPipeline Step 4: Vision reranking %d → top %d…",
-                    len(candidates),
-                    self.top_x_rerank,
-                )
-                candidate_images = [
-                    self._fetch_image(item.image_url) for item in candidates
-                ]
-                valid_pairs = [
-                    (img, item)
-                    for img, item in zip(candidate_images, candidates)
-                    if img is not None
-                ]
-                if valid_pairs:
-                    valid_images, valid_items = zip(*valid_pairs)
-                    ranked_indices = self.reranker.rerank(
-                        query_image,
-                        list(valid_images),
-                        top_x=self.top_x_rerank,
-                    )
-                    top_items = [valid_items[i] for i in ranked_indices][: self.top_x_rerank]
-                else:
-                    top_items = candidates[: self.top_x_rerank]
-
-            # ── Step 5: Package result ────────────────────────────────
-            recommendations.append(
-                Recommendation(query_item=item_meta, suggestions=top_items)
-            )
-            logger.info(
-                "RAGPipeline: %d recommendation(s) finalized for item '%s'.",
-                len(top_items),
+        if not candidates:
+            logger.warning(
+                "RAGPipeline: no candidates retrieved for item '%s'. "
+                "Is the FAISS database built? Run build_database first.",
                 item_type,
             )
+            return Recommendation(query_item=item_meta, suggestions=[])
 
-        return recommendations
+        if self.skip_reranking or len(candidates) <= self.top_x_rerank:
+            top_items = candidates[: self.top_x_rerank]
+        else:
+            logger.info(
+                "RAGPipeline Step 4: Vision reranking %d → top %d…",
+                len(candidates),
+                self.top_x_rerank,
+            )
+            candidate_images = [
+                self._fetch_image(item.image_url) for item in candidates
+            ]
+            valid_pairs = [
+                (img, item)
+                for img, item in zip(candidate_images, candidates)
+                if img is not None
+            ]
+            if valid_pairs:
+                valid_images, valid_items = zip(*valid_pairs)
+                ranked_indices = await run_in_threadpool(
+                    self.reranker.rerank, query_image, list(valid_images), self.top_x_rerank
+                )
+                top_items = [valid_items[i] for i in ranked_indices][: self.top_x_rerank]
+            else:
+                top_items = candidates[: self.top_x_rerank]
+
+        logger.info(
+            "RAGPipeline: %d recommendation(s) finalized for item '%s'.",
+            len(top_items),
+            item_type,
+        )
+        return Recommendation(query_item=item_meta, suggestions=top_items)
 
     # ------------------------------------------------------------------
     # Utility

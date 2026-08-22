@@ -11,7 +11,7 @@ class RecommendationService:
     def __init__(self):
         self.pipeline = RAGPipeline()
     
-    def process_recommendation(self, image_bytes: bytes) -> List[RecommendationResponse]:
+    async def process_recommendation(self, image_bytes: bytes) -> List[RecommendationResponse]:
         """
         Processes image bytes, runs the RAG pipeline, and formats response.
         """
@@ -19,7 +19,7 @@ class RecommendationService:
         query_image = bytes_to_image(image_bytes)
 
         # Run RAG Pipeline
-        rag_results = self.pipeline.run(query_image)
+        rag_results = await self.pipeline.run(query_image)
 
         # Map to API response schema
         response = []
