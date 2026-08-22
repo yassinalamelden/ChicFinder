@@ -21,6 +21,8 @@ from pathlib import Path
 import boto3
 import psycopg2
 
+from chic_finder.db import connection_kwargs_from_env
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s")
 logger = logging.getLogger("seed_catalog")
 
@@ -107,26 +109,8 @@ def seed_catalog(images_dir: Path, metadata_path: Path, bucket_name: str, db_con
 
 
 def _connect_from_env():
-    """Builds a psycopg2 connection from DB_SECRET_ARN (via Secrets Manager) or
-    discrete DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD env vars for local use."""
-    secret_arn = os.getenv("DB_SECRET_ARN")
-    if secret_arn:
-        secretsmanager = boto3.client("secretsmanager")
-        secret = json.loads(secretsmanager.get_secret_value(SecretId=secret_arn)["SecretString"])
-        return psycopg2.connect(
-            host=secret["host"],
-            port=secret["port"],
-            dbname=secret.get("dbname", "chicfinder"),
-            user=secret["username"],
-            password=secret["password"],
-        )
-    return psycopg2.connect(
-        host=os.environ["DB_HOST"],
-        port=os.getenv("DB_PORT", "5432"),
-        dbname=os.getenv("DB_NAME", "chicfinder"),
-        user=os.environ["DB_USER"],
-        password=os.environ["DB_PASSWORD"],
-    )
+    """Builds a psycopg2 connection using the shared connection-kwargs resolver."""
+    return psycopg2.connect(**connection_kwargs_from_env())
 
 
 def main() -> None:
