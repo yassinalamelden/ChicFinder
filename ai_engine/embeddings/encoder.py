@@ -96,6 +96,14 @@ class FashionCLIPEncoder:
         if local_model_path.exists():
             logger.info("Loading local CLIP model from: %s", local_model_path)
             model_source = str(local_model_path)
+        elif configured_model_path != DEFAULT_LOCAL_CLIP_PATH:
+            # CLIP_MODEL_PATH was explicitly set but isn't a local directory —
+            # treat it as a Hugging Face Hub repo ID (from_pretrained accepts both).
+            logger.info(
+                "CLIP_MODEL_PATH=%s is not a local path — loading as a Hub repo ID.",
+                configured_model_path,
+            )
+            model_source = configured_model_path
         else:
             logger.info(
                 "Local CLIP model not found at %s. Falling back to %s",
