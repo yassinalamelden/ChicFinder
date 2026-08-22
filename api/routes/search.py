@@ -2,11 +2,13 @@ import base64
 import time
 import os
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, HttpUrl
+from starlette.concurrency import run_in_threadpool
 
 # Import the standalone function from your vector store
 from ai_engine.embeddings.vector_store import search_similar_items
+from api.dependencies.auth import get_current_user
 
 router = APIRouter()
 
@@ -34,7 +36,11 @@ class SearchResponse(BaseModel):
 # --- ENDPOINT ---
 
 @router.post("/search", response_model=SearchResponse)
-def search_endpoint(request: SearchRequest, fastapi_req: Request):
+async def search_endpoint(
+    request: SearchRequest,
+    fastapi_req: Request,
+    user: dict = Depends(get_current_user),
+):
     start_time = time.time()
     metadata = getattr(fastapi_req.app.state, "metadata", {})
 
@@ -66,7 +72,7 @@ def search_endpoint(request: SearchRequest, fastapi_req: Request):
 
     try:
         # Increase top_k to allow enough items after filtering
-        search_results = search_similar_items(image_bytes, top_k=50)
+        search_results = await run_in_threadpool(search_similar_items, image_bytes, top_k=50)
         
         response_items = []
         seen_product_ids = set()
