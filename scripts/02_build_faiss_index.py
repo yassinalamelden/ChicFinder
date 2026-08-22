@@ -14,6 +14,7 @@ Environment:
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -29,6 +30,7 @@ from ai_engine.embeddings.database_builder import (
     DEFAULT_METADATA_SOURCE_PATH,
     FAISSIndexBuilder,
 )
+from ai_engine.embeddings.remote_database_builder import RemoteIndexBuilder
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,16 +74,30 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    images_dir = Path(args.images)
-    images_dir.mkdir(parents=True, exist_ok=True)
+    bucket_name = os.getenv("S3_BUCKET_NAME")
+    if bucket_name:
+        logger.info("S3_BUCKET_NAME is set — building from S3 + RDS...")
+        from chic_finder.db import init_pool
 
-    logger.info("Initializing FAISS index builder...")
-    builder = FAISSIndexBuilder(
-        index_path=Path(args.index),
-        mapping_path=Path(args.mapping),
-        metadata_source_path=Path(args.metadata),
-    )
-    builder.build(images_dir=images_dir)
+        init_pool()
+        builder = RemoteIndexBuilder(
+            bucket_name=bucket_name,
+            index_path=Path(args.index),
+            mapping_path=Path(args.mapping),
+        )
+        builder.build()
+    else:
+        images_dir = Path(args.images)
+        images_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info("Initializing local FAISS index builder...")
+        builder = FAISSIndexBuilder(
+            index_path=Path(args.index),
+            mapping_path=Path(args.mapping),
+            metadata_source_path=Path(args.metadata),
+        )
+        builder.build(images_dir=images_dir)
+
     logger.info("Done. Offline FAISS artifacts are ready.")
 
 
