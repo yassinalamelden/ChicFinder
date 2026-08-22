@@ -209,54 +209,6 @@ The image installs from `requirements.lock` for a reproducible build.
 | GET | `/api/v1/stores/{store_id}/items` | Public | Store's product catalog |
 | GET | `/api/v1/health` | Public | Liveness probe |
 
-```json
-// POST /api/v1/recommend — Response
-{
-  "success": true,
-  "query_url": null,
-  "engine_used": "Gemini_RAG_Pipeline",
-  "recommendations": [
-    {
-      "query_item": {
-        "type": "sneakers",
-        "color": "red",
-        "style": "athletic",
-        "gender": "unisex",
-        "material": "knit",
-        "fit": "regular"
-      },
-      "recommendations": [
-        {
-          "id": "nike_028_0",
-          "category": "N/A",
-          "sub_category": null,
-          "color": null,
-          "style": null,
-          "image_url": "data/raw_images/nike_028_0.jpg",
-          "brand": null,
-          "price": null
-        }
-      ]
-    }
-  ]
-}
-```
-
-`engine_used` is `"Gemini_RAG_Pipeline"` on success or `"Local_FashionCLIP_FAISS"` when the RAG pipeline falls back.
-
----
-
-## 👥 Team — Slice 2
-
-| Member | Role | Module |
-|---|---|---|
-| Yassin | AI Embeddings | FashionCLIP encoder, vector store, model training |
-| Moamen | LLM Integration & API | `ai_engine/llm/`, FastAPI endpoints |
-| Amr | RAG Pipeline | Offline indexing, data pipeline |
-| Gaber | Metadata Injection | Brand/price/URL enrichment |
-| Gendy & Nour | Frontend | Next.js UI, product cards, upload flow |
-| Barawy | Data Scraping | Local brand scrapers |
-
 ---
 
 ## 🤝 Contributing
