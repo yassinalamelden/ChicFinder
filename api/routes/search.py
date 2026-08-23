@@ -1,4 +1,5 @@
 import base64
+import logging
 import time
 import os
 from typing import List, Optional
@@ -10,6 +11,8 @@ from starlette.concurrency import run_in_threadpool
 from ai_engine.embeddings.vector_store import search_similar_items
 from api.dependencies.auth import get_current_user
 from chic_finder.db import get_items_by_ids
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -75,7 +78,15 @@ async def search_endpoint(
         search_results = await run_in_threadpool(search_similar_items, image_bytes, top_k=50)
 
         candidate_ids = [str(item.get("id", "")).replace(".jpg", "") for item in search_results]
-        metadata = await run_in_threadpool(get_items_by_ids, candidate_ids)
+        try:
+            metadata = await run_in_threadpool(get_items_by_ids, candidate_ids)
+        except Exception as exc:
+            # Degrade gracefully to unenriched results (same as the old
+            # app.state.metadata path) instead of 500ing the whole search
+            # when RDS enrichment is unavailable (e.g. pool not initialized
+            # locally, or a transient DB hiccup in production).
+            logger.warning("RDS metadata enrichment failed, degrading to unenriched results: %s", exc)
+            metadata = {}
 
         response_items = []
         seen_product_ids = set()
