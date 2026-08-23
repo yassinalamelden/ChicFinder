@@ -26,6 +26,10 @@ class Config:
     VECTOR_DB_PATH: str = field(default_factory=lambda: os.getenv("VECTOR_DB_PATH", "data/faiss_index"))
     IMAGE_DB_PATH: str = field(default_factory=lambda: os.getenv("IMAGE_DB_PATH", "data/images"))
     EMBEDDING_DIM: int = 256
+
+    # FAISS index artifact paths (overridable so ECS can point them at the EFS mount)
+    FAISS_INDEX_PATH: str = field(default_factory=lambda: os.getenv("FAISS_INDEX_PATH", "data/embeddings.index"))
+    FAISS_MAPPING_PATH: str = field(default_factory=lambda: os.getenv("FAISS_MAPPING_PATH", "data/index_to_image_id.json"))
     
     # Model Paths
     SEGMENTER_MODEL_PATH: str = field(default_factory=lambda: os.getenv("SEGMENTER_MODEL_PATH", "models/segmenter_vit_b.pth"))

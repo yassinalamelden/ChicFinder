@@ -22,6 +22,7 @@ import numpy as np
 
 from ai_engine.embeddings.database_builder import DEFAULT_IMAGES_DIR
 from ai_engine.embeddings.encoder import get_encoder
+from chic_finder.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,10 @@ logger = logging.getLogger(__name__)
 # Default paths
 # ---------------------------------------------------------------------------
 
-DEFAULT_INDEX_PATH = Path("data/embeddings.index")
-DEFAULT_MAPPING_PATH = Path("data/index_to_image_id.json")
+# Configurable via FAISS_INDEX_PATH / FAISS_MAPPING_PATH (see chic_finder/config.py)
+# so ECS can point these at the EFS mount; defaults are unchanged from before.
+DEFAULT_INDEX_PATH = Path(settings.FAISS_INDEX_PATH)
+DEFAULT_MAPPING_PATH = Path(settings.FAISS_MAPPING_PATH)
 DEFAULT_TOP_K = 5
 
 

@@ -93,3 +93,60 @@ def test_index_builder_task_definition_mounts_efs_read_write():
         compute.builder_security_group.security_group_id
         != compute.api_service.service.connections.security_groups[0].security_group_id
     )
+
+
+def test_index_builder_writes_to_the_efs_mount_the_api_reads_from():
+    """The builder must be told (via --index/--mapping) to write its FAISS
+    artifacts onto the EFS mount rather than the container's own ephemeral
+    filesystem, and the API must be told (via env vars) to read from the
+    exact same EFS paths. Otherwise the built index never reaches the API."""
+    stack, _ = _build_stack()
+    template = Template.from_stack(stack)
+
+    template.has_resource_properties(
+        "AWS::ECS::TaskDefinition",
+        {
+            "ContainerDefinitions": Match.array_with(
+                [
+                    Match.object_like(
+                        {
+                            "Command": [
+                                "python",
+                                "scripts/02_build_faiss_index.py",
+                                "--index",
+                                "/mnt/faiss-index/embeddings.index",
+                                "--mapping",
+                                "/mnt/faiss-index/index_to_image_id.json",
+                            ],
+                        }
+                    )
+                ]
+            )
+        },
+    )
+
+    template.has_resource_properties(
+        "AWS::ECS::TaskDefinition",
+        {
+            "ContainerDefinitions": Match.array_with(
+                [
+                    Match.object_like(
+                        {
+                            "Environment": Match.array_with(
+                                [
+                                    {
+                                        "Name": "FAISS_INDEX_PATH",
+                                        "Value": "/mnt/faiss-index/embeddings.index",
+                                    },
+                                    {
+                                        "Name": "FAISS_MAPPING_PATH",
+                                        "Value": "/mnt/faiss-index/index_to_image_id.json",
+                                    },
+                                ]
+                            )
+                        }
+                    )
+                ]
+            )
+        },
+    )

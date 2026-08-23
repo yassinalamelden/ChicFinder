@@ -9,6 +9,12 @@ from chicfinder_constructs.filesystem import Filesystem
 
 APP_SECRETS_NAME = "chicfinder/app-secrets"
 
+# Container path where the shared EFS volume is mounted in both task
+# definitions (read-only for the API, read-write for the index builder).
+EFS_MOUNT_PATH = "/mnt/faiss-index"
+FAISS_INDEX_PATH = f"{EFS_MOUNT_PATH}/embeddings.index"
+FAISS_MAPPING_PATH = f"{EFS_MOUNT_PATH}/index_to_image_id.json"
+
 # Repo root, computed from this file's own location so the Docker build context
 # resolves correctly regardless of the directory `cdk synth`/`cdk deploy` is
 # invoked from (a cwd-relative "../.." would otherwise silently point at the
@@ -67,6 +73,8 @@ class Compute(Construct):
                 "APP_ENV": "production",
                 "DB_SECRET_ARN": database.secret.secret_arn,
                 "S3_BUCKET_NAME": bucket.bucket_name,
+                "FAISS_INDEX_PATH": FAISS_INDEX_PATH,
+                "FAISS_MAPPING_PATH": FAISS_MAPPING_PATH,
             },
             secrets={
                 "OPENROUTER_API_KEY": ecs.Secret.from_secrets_manager(
@@ -80,7 +88,7 @@ class Compute(Construct):
         )
         container.add_mount_points(
             ecs.MountPoint(
-                container_path="/mnt/faiss-index",
+                container_path=EFS_MOUNT_PATH,
                 source_volume="faiss-index",
                 read_only=True,
             )
@@ -146,7 +154,14 @@ class Compute(Construct):
                 directory=str(_REPO_ROOT),
                 file="infrastructure/docker/Dockerfile.api",
             ),
-            command=["python", "scripts/02_build_faiss_index.py"],
+            command=[
+                "python",
+                "scripts/02_build_faiss_index.py",
+                "--index",
+                FAISS_INDEX_PATH,
+                "--mapping",
+                FAISS_MAPPING_PATH,
+            ],
             environment={
                 "APP_ENV": "production",
                 "DB_SECRET_ARN": database.secret.secret_arn,
@@ -156,7 +171,7 @@ class Compute(Construct):
         )
         builder_container.add_mount_points(
             ecs.MountPoint(
-                container_path="/mnt/faiss-index",
+                container_path=EFS_MOUNT_PATH,
                 source_volume="faiss-index",
                 read_only=False,
             )
