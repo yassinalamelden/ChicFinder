@@ -51,14 +51,20 @@ def connection_kwargs_from_env() -> dict:
     )
 
 
-def init_pool(minconn: int = 1, maxconn: int = 10) -> None:
-    """Creates the module-level connection pool. Call once at app startup."""
+def init_pool(minconn: int = 2, maxconn: int = 20) -> None:
+    """Creates the module-level connection pool. Call once at app startup.
+
+    Uses ThreadedConnectionPool (not SimpleConnectionPool) because
+    get_items_by_ids() is invoked via run_in_threadpool from api/routes/search.py
+    — i.e. from real concurrent OS threads. SimpleConnectionPool's getconn/putconn
+    aren't guarded by a lock and aren't safe to share across threads.
+    """
     global _pool
     if _pool is None:
-        _pool = psycopg2.pool.SimpleConnectionPool(minconn, maxconn, **connection_kwargs_from_env())
+        _pool = psycopg2.pool.ThreadedConnectionPool(minconn, maxconn, **connection_kwargs_from_env())
 
 
-def get_pool() -> psycopg2.pool.SimpleConnectionPool:
+def get_pool() -> psycopg2.pool.ThreadedConnectionPool:
     if _pool is None:
         raise RuntimeError(
             "DB pool not initialized — call init_pool() first (see api/main.py's lifespan)."
