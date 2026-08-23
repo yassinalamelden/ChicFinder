@@ -32,6 +32,8 @@ def sample_catalog(tmp_path):
                     "product_url": "https://tomato.example.com/item1",
                     "availability": True,
                     "store_id": "tomato",
+                    "title": "Tomato Classic White Tee",
+                    "product_id": "tomato-classic-tee",
                 }
             }
         )
@@ -68,6 +70,8 @@ def test_seed_catalog_uploads_images_and_inserts_records(sample_catalog):
     assert len(insert_calls) == 1
     assert insert_calls[0].args[1][0] == "item1"  # id
     assert insert_calls[0].args[1][4] == "Tomato"  # brand
+    assert insert_calls[0].args[1][11] == "Tomato Classic White Tee"  # title
+    assert insert_calls[0].args[1][12] == "tomato-classic-tee"  # product_id
 
 
 @mock_aws

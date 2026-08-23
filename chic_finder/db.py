@@ -21,7 +21,7 @@ _pool = None
 
 ITEM_COLUMNS = (
     "id, category, sub_category, color, style, brand, price, "
-    "product_url, availability, image_key, store_id"
+    "product_url, availability, image_key, store_id, title, product_id"
 )
 
 

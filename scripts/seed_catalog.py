@@ -38,14 +38,17 @@ CREATE TABLE IF NOT EXISTS items (
     product_url TEXT,
     availability BOOLEAN DEFAULT TRUE,
     image_key TEXT,
-    store_id TEXT
+    store_id TEXT,
+    title TEXT,
+    product_id TEXT
 );
 """
 
 INSERT_ITEM = """
 INSERT INTO items (id, category, sub_category, color, brand, style, price,
-                    product_url, availability, image_key, store_id)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    product_url, availability, image_key, store_id, title,
+                    product_id)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (id) DO UPDATE SET
     category = EXCLUDED.category,
     sub_category = EXCLUDED.sub_category,
@@ -56,7 +59,9 @@ ON CONFLICT (id) DO UPDATE SET
     product_url = EXCLUDED.product_url,
     availability = EXCLUDED.availability,
     image_key = EXCLUDED.image_key,
-    store_id = EXCLUDED.store_id;
+    store_id = EXCLUDED.store_id,
+    title = EXCLUDED.title,
+    product_id = EXCLUDED.product_id;
 """
 
 
@@ -101,6 +106,8 @@ def seed_catalog(images_dir: Path, metadata_path: Path, bucket_name: str, db_con
                     record.get("availability", True),
                     image_filename,
                     record.get("store_id"),
+                    record.get("title"),
+                    record.get("product_id"),
                 ),
             )
 
