@@ -70,3 +70,9 @@ evals/
 runs/
 logs/
 FAILURE.md
+
+# Local dev notes / sample data (not shared repo content)
+dev.md
+DEVELOPMENT.md
+products.json
+stores.json
