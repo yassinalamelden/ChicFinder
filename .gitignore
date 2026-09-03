@@ -26,8 +26,6 @@ models/
 *.h5
 *.onnx
 uploads/
-scrapers/
-data/
 design-extract-output
 
 # Secrets
