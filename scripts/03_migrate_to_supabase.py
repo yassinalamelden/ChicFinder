@@ -6,13 +6,28 @@ Prerequisites:
   - pip install supabase faiss-cpu tqdm Pillow
   - SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY set in .env
   - data/metadata.json, data/metadata.jsonl, data/embeddings.index,
-    data/index_to_image_id.json, data/raw_images/ all present locally
+    data/index_to_image_id.json, data/train/ + data/validation/ all
+    present locally
+  - IMPORTANT: this migration now sends a `gender` field on every product
+    row (Men/Women/Kids) -- the products table in Supabase needs a
+    `gender` text column for this to land. If it doesn't exist yet, add
+    it first (e.g. `ALTER TABLE products ADD COLUMN gender text;`) or
+    the upsert in step 2 will fail. This is the whole point of the
+    2026-09 dataset-cleanup pass (gender balance) -- without this
+    column, that work never reaches retrieval-time filtering.
+
+2026-09 update: data/raw_images/ no longer exists (consolidated into
+data/train/ + data/validation/ to avoid storing every image twice --
+see (C) DATASET-PLAN.md). Image discovery here now reads filenames from
+metadata.jsonl and looks them up in both split folders, and no longer
+assumes .jpg -- the dataset has .jpeg/.png/.webp too (10.7% of files).
 
 Run:
   python scripts/03_migrate_to_supabase.py
 """
 
 import json
+import mimetypes
 import os
 import sys
 from pathlib import Path
@@ -72,9 +87,13 @@ for image_key, entry in metadata.items():
             "title": entry.get("title"),
             "brand": entry.get("brand"),
             "category": entry.get("category"),
+            "gender": entry.get("gender"),  # requires a `gender` column -- see module docstring
             "price": entry.get("price"),
             "product_url": entry.get("product_url"),
             "description": detail.get("description"),
+            # metadata.jsonl doesn't carry availability through from the raw
+            # scrape (schema gap, pre-existing) -- defaults to InStock for
+            # every row; not accurate, just the honest current behavior.
             "availability": detail.get("availability", "InStock"),
         }
 
@@ -97,8 +116,9 @@ print("\nInserting embeddings...")
 embeddings_to_insert = []
 for faiss_idx_str, image_key in index_to_image_id.items():
     faiss_idx = int(faiss_idx_str)
-    # index_to_image_id values may include ".jpg"; strip it to match metadata keys
-    meta_key = image_key[:-4] if image_key.endswith(".jpg") else image_key
+    # index_to_image_id values are filenames with extension (.jpg/.jpeg/
+    # .png/.webp); metadata.json is keyed by the extension-free stem.
+    meta_key = Path(image_key).stem
     entry = metadata.get(meta_key, {})
     pid = entry.get("product_id", meta_key)
     db_id = product_id_map.get(pid)
@@ -123,17 +143,34 @@ print(f"  Inserted {len(embeddings_to_insert)} embedding rows")
 # --- 4. Upload images to Supabase Storage ------------------------------------
 
 print("\nUploading images to Supabase Storage (bucket: product-images)...")
-images_dir = DATA / "raw_images"
-image_files = list(images_dir.glob("*.jpg"))
-print(f"  Found {len(image_files)} images")
+# raw_images/ was consolidated into train/ + validation/ (2026-09) to avoid
+# storing every image twice -- look a filename up in whichever split has it.
+SPLIT_DIRS = [DATA / "train", DATA / "validation"]
+
+image_files = []
+missing = 0
+for entry in metadata.values():
+    filename = entry.get("filename")
+    if not filename:
+        continue
+    for split_dir in SPLIT_DIRS:
+        candidate = split_dir / filename
+        if candidate.exists():
+            image_files.append(candidate)
+            break
+    else:
+        missing += 1
+
+print(f"  Found {len(image_files)} images ({missing} referenced in metadata but missing on disk)")
 
 for img_path in tqdm(image_files, desc="Uploading images"):
     storage_path = img_path.name  # e.g. "tomato_123_0.jpg"
+    content_type = mimetypes.guess_type(img_path.name)[0] or "application/octet-stream"
     with open(img_path, "rb") as f:
         img_bytes = f.read()
     try:
         supabase.storage.from_("product-images").upload(
-            storage_path, img_bytes, {"content-type": "image/jpeg", "upsert": "true"}
+            storage_path, img_bytes, {"content-type": content_type, "upsert": "true"}
         )
     except Exception as exc:
         # Skip if already exists
