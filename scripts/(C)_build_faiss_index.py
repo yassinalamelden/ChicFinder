@@ -2,12 +2,18 @@
 scripts/(C)_build_faiss_index.py
 ==================================
 Rebuilds the local FAISS index from scratch off every image currently in
-data/raw_images/. Needed because:
+data/train/ + data/validation/ (data/raw_images/ was consolidated into
+these two split folders -- see (C) DATASET-PLAN.md -- so this reads both
+instead of a single flat directory). Needed because:
   - scripts/build_database.py is broken (imports a database_builder.py
     that doesn't exist in this repo)
   - FAISS IndexFlatIP has no in-place delete/update, so this is how
     removed brands (activ) actually drop out of retrieval and newly
     ingested brands actually become searchable
+  - Also re-run this any time models/fine_tuned_clip changes (e.g. after
+    fine-tuning a new checkpoint) -- the index embeds with whatever
+    model FashionCLIPEncoder currently loads, so a stale index reflects
+    the OLD model's embedding space, not the new one.
 
 Encodes with the existing FashionCLIPEncoder singleton
 (ai_engine/embeddings/encoder.py) -- 512-dim, L2-normalized, unchanged.
@@ -37,7 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from ai_engine.embeddings.encoder import get_encoder  # noqa: E402
 
-RAW_IMAGES_DIR = Path("data/raw_images")
+SPLIT_DIRS = [Path("data/train"), Path("data/validation")]
 INDEX_PATH = Path("data/embeddings.index")
 MAPPING_PATH = Path("data/index_to_image_id.json")
 EMBEDDING_DIM = 512
@@ -50,8 +56,17 @@ def main():
             shutil.copy2(path, backup)
             print(f"Backed up {path} -> {backup}")
 
-    filenames = sorted(p.name for p in RAW_IMAGES_DIR.iterdir() if p.is_file())
-    print(f"Encoding {len(filenames)} images from {RAW_IMAGES_DIR}...")
+    # filename -> full path, across both split folders (duplicate filenames
+    # shouldn't occur -- each image lives in exactly one split -- but if one
+    # ever did, train/ wins since it's listed first).
+    path_by_filename = {}
+    for split_dir in SPLIT_DIRS:
+        for p in split_dir.iterdir():
+            if p.is_file():
+                path_by_filename.setdefault(p.name, p)
+
+    filenames = sorted(path_by_filename.keys())
+    print(f"Encoding {len(filenames)} images from {[str(d) for d in SPLIT_DIRS]}...")
 
     encoder = get_encoder()
 
@@ -62,7 +77,7 @@ def main():
     start = time.time()
 
     for i, filename in enumerate(filenames):
-        filepath = RAW_IMAGES_DIR / filename
+        filepath = path_by_filename[filename]
         try:
             image_bytes = filepath.read_bytes()
             vec = encoder.encode(image_bytes)

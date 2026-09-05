@@ -6,17 +6,49 @@ from torch.utils.data import Dataset
 from PIL import Image
 import numpy as np
 
+def _load_metadata(metadata_path):
+    """
+    Loads either shape used in this repo:
+      - metadata.json: dict keyed by filename stem -> record
+      - *_metadata.jsonl (e.g. data/train_metadata.jsonl,
+        data/validation_metadata.jsonl -- the product-level, brand x
+        gender stratified split): one JSON record per line, each with
+        a "filename" field.
+    Returns the dict-keyed-by-filename-stem shape either way, since
+    that's what the rest of this class expects.
+    """
+    if str(metadata_path).endswith(".jsonl"):
+        metadata = {}
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                rec = json.loads(line)
+                filename = rec.get("filename")
+                if filename:
+                    metadata[os.path.splitext(filename)[0]] = rec
+        return metadata
+    with open(metadata_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 class ChicFinderTripletDataset(Dataset):
     """
-    A real triplet dataset using scraped data from data/raw_images.
-    Groups images by product_id to form (anchor, positive, negative) triplets.
+    A real triplet dataset using scraped data. Groups images by
+    product_id to form (anchor, positive, negative) triplets.
+
+    metadata_path can be data/metadata.json (dict, whole dataset) or
+    one of the train/validation split manifests (data/train_metadata.jsonl,
+    data/validation_metadata.jsonl) -- pass the matching images_dir
+    (data/train or data/validation) so training and validation never
+    draw from overlapping images.
     """
-    def __init__(self, processor, metadata_path="data/metadata.json", images_dir="data/raw_images"):
+    def __init__(self, processor, metadata_path="data/train_metadata.jsonl", images_dir="data/train"):
         self.processor = processor
         self.images_dir = images_dir
 
-        with open(metadata_path, "r", encoding="utf-8") as f:
-            self.metadata = json.load(f)
+        self.metadata = _load_metadata(metadata_path)
 
         # Group images by product_id
         self.product_to_images = {}
@@ -29,10 +61,16 @@ class ChicFinderTripletDataset(Dataset):
                 self.product_to_images[pid] = []
             self.product_to_images[pid].append(info["filename"])
             
-            # Ensure category is a string and not None
+            # Normalize category casing/whitespace -- the raw per-brand
+            # taxonomy has the same real category spelled differently
+            # ("Set"/"sets"/"Sets", "Shirts"/"shirts") purely from string
+            # formatting, not a real distinction. This doesn't unify
+            # genuinely different labels ("Tops" vs "T-Shirts") -- that's
+            # the separate, bigger taxonomy-unification task -- it just
+            # stops casing/whitespace from fragmenting one category into
+            # several confusion-matrix rows.
             cat = info.get("category")
-            if cat is None:
-                cat = "unknown"
+            cat = cat.strip().title() if cat and cat.strip() else "Unknown"
             self.filename_to_category[info["filename"]] = cat
 
         # Filter products with at least 2 images for Anchor/Positive pairs
