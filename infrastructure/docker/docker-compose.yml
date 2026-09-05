@@ -12,24 +12,14 @@ services:
       - ../../uploads:/app/uploads
     ports:
       - "8000:8000"
-
-  frontend:
-    build:
-      context: ../../
-      dockerfile: infrastructure/docker/Dockerfile.frontend
-    env_file: ../../.env
-    ports:
-      - "8501:8501"
-    depends_on:
-      - api
+    restart: unless-stopped
 
   nginx:
-    image: nginx:latest
+    image: nginx:alpine
     volumes:
       - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../../index.html:/usr/share/nginx/html/index.html:ro
     ports:
       - "80:80"
     depends_on:
       - api
-      - frontend
+    restart: unless-stopped

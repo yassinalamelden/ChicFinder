@@ -8,6 +8,12 @@ venv/
 env/
 .venv/
 .env
+.env.local
+.env.*.local
+*.env.local
+FrontEnd/.env.local
+FrontEnd/.env.production
+website_fullstack/.env.local
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -20,10 +26,31 @@ models/
 *.h5
 *.onnx
 uploads/
-scrapers/
-data/
+design-extract-output
+
+# Secrets
+firebase-service-account.json
 
 # OS / IDE
 .DS_Store
 .vscode/
 .idea/
+
+# Editor swap files
+*.swp
+*.swo
+
+# Next.js (FrontEnd/)
+FrontEnd/.next/
+FrontEnd/out/
+FrontEnd/node_modules/
+FrontEnd/.vercel
+FrontEnd/next-env.d.ts
+FrontEnd/*.tsbuildinfo
+FrontEnd/coverage/
+FrontEnd/build/
+FrontEnd/dist/
+.gstack/
+
+# MCP config (local only)
+.mcp.json

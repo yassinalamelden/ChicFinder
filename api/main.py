@@ -3,16 +3,14 @@ api/main.py
 ============
 FastAPI application entry point.
 
-Changes vs original:
-  - Added `lifespan` context manager to pre-warm FAISSVectorStore once at startup.
+  - `lifespan` warms up FashionCLIP encoder and verifies Supabase connection.
   - Mounted ./uploads at /uploads (writable, for query images).
-  - Mounted ./data/images at /dataset (read-only, for dataset images).
-  - Registered the new /upload route (same router file as /recommend).
+  - All product data and images are served from Supabase (PostgreSQL + Storage).
 """
 
 from contextlib import asynccontextmanager
-import json
 import logging
+import os
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -24,7 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import recommend, health, search
+from api.routes import recommend, health, search, stores
 from api.middleware.logging import LoggingMiddleware
 from chic_finder.config import settings
 
@@ -37,41 +35,27 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Load heavy AI artifacts once when the server starts.
-    Gracefully skips if the FAISS index hasn't been built yet.
-    """
-    # Ensure ./uploads/ exists so StaticFiles mount doesn't fail
+    """Ensure uploads dir exists. All data is now in Supabase."""
     Path("uploads").mkdir(parents=True, exist_ok=True)
 
-    # Pre-warm the FAISSVectorStore (+ FashionCLIPEncoder inside it)
+    # Warm up the FashionCLIP encoder (downloads model on first run)
     try:
-        from ai_engine.embeddings.vector_store import FAISSVectorStore
-        FAISSVectorStore.get_instance()
-        logger.info("FAISSVectorStore pre-warmed successfully.")
-    except FileNotFoundError as exc:
-        logger.warning(
-            "FAISS index not found at startup — searches will fail until built. %s", exc
-        )
+        from ai_engine.embeddings.encoder import get_encoder
+        get_encoder()
+        logger.info("FashionCLIP encoder ready.")
     except Exception as exc:
-        logger.error("Unexpected error pre-warming FAISSVectorStore: %s", exc)
+        logger.error("Failed to warm up encoder: %s", exc)
 
-    # ---------------------------------------------------------
-    # FIX: Load our real Barawy metadata instead of products.json
-    # ---------------------------------------------------------
-    app.state.metadata = {}
-    metadata_path = Path("data/metadata.json")
-    if metadata_path.exists():
-        try:
-            with open(metadata_path, "r", encoding="utf-8") as f:
-                app.state.metadata = json.load(f)
-                logger.info("Loaded %d products from data/metadata.json", len(app.state.metadata))
-        except Exception as exc:
-            logger.error("Failed to load metadata.json: %s", exc)
-    else:
-        logger.warning("data/metadata.json not found!")
+    # Verify Supabase connection
+    try:
+        from api.db.client import get_supabase_client
+        client = get_supabase_client()
+        client.table("products").select("id").limit(1).execute()
+        logger.info("Supabase connection verified.")
+    except Exception as exc:
+        logger.error("Supabase connection failed: %s", exc)
 
-    yield  # application runs here
+    yield
 
 # ---------------------------------------------------------------------------
 # Application
@@ -79,13 +63,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-# CORS
+# CORS — restrict origins to configured frontend URLs
+ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Custom logging middleware
@@ -95,15 +80,14 @@ app.add_middleware(LoggingMiddleware)
 app.include_router(recommend.router, prefix=settings.API_V1_STR, tags=["recommendation"])
 app.include_router(health.router,    prefix=settings.API_V1_STR, tags=["health"])
 app.include_router(search.router,    prefix=settings.API_V1_STR, tags=["search"])
+app.include_router(stores.router,    prefix=settings.API_V1_STR, tags=["stores"])
 
 # ---------------------------------------------------------------------------
 # Ensure required directories exist (must happen BEFORE app.mount calls)
 # ---------------------------------------------------------------------------
 
 _UPLOADS_DIR = Path("uploads")
-_DATA_DIR    = Path("data/raw_images")
 _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -112,9 +96,6 @@ _DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # User-uploaded query images
 app.mount("/uploads", StaticFiles(directory=str(_UPLOADS_DIR)), name="uploads")
-
-# Dataset images — served read-only so frontend can display results by URL
-app.mount("/images", StaticFiles(directory=str(_DATA_DIR)), name="images")
 
 
 # ---------------------------------------------------------------------------
