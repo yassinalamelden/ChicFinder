@@ -46,12 +46,18 @@ def render_results(api_response: dict):
                 """, unsafe_allow_html=True)
                 
                 # Render Image
-                images_dir = _PROJECT_ROOT / "data" / "raw_images"
+                # data/raw_images/ was consolidated into data/train/ +
+                # data/validation/ (see (C) DATASET-PLAN.md) -- check both.
+                # Also added .webp: ~7.6% of the current dataset is webp,
+                # missing from the original (.jpg/.jpeg/.png only) list.
                 image_path = None
-                for ext in (".jpg", ".jpeg", ".png"):
-                    candidate = images_dir / f"{image_id}{ext}"
-                    if candidate.exists():
-                        image_path = candidate
+                for images_dir in (_PROJECT_ROOT / "data" / "train", _PROJECT_ROOT / "data" / "validation"):
+                    for ext in (".jpg", ".jpeg", ".png", ".webp"):
+                        candidate = images_dir / f"{image_id}{ext}"
+                        if candidate.exists():
+                            image_path = candidate
+                            break
+                    if image_path:
                         break
                 if image_path:
                     st.image(str(image_path), use_container_width=True)

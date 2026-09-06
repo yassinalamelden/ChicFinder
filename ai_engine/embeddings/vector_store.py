@@ -25,6 +25,18 @@ from ai_engine.embeddings.encoder import get_encoder
 
 logger = logging.getLogger(__name__)
 
+# data/raw_images/ (DEFAULT_IMAGES_DIR) was consolidated into data/train/ +
+# data/validation/ (see (C) DATASET-PLAN.md) -- resolve a filename against
+# whichever split actually has it, instead of the single now-removed dir.
+_SPLIT_DIRS = [Path("data/train"), Path("data/validation")]
+
+
+def _resolve_image_dir(filename: str) -> Path:
+    for split_dir in _SPLIT_DIRS:
+        if (split_dir / filename).exists():
+            return split_dir
+    return DEFAULT_IMAGES_DIR  # fallback -- keeps old behavior if neither has it
+
 # ---------------------------------------------------------------------------
 # Default paths
 # ---------------------------------------------------------------------------
@@ -138,7 +150,7 @@ class FAISSVectorStore:
             if isinstance(meta, str):
                 filename = meta
                 item_id = Path(filename).stem
-                image_url = str(DEFAULT_IMAGES_DIR / filename)
+                image_url = str(_resolve_image_dir(filename) / filename)
             else:
                 filename = meta.get("filename", "")
                 item_id = meta.get("id", str(idx))
@@ -190,7 +202,7 @@ class FAISSVectorStore:
                 payload = {
                     "_id": item_id,
                     "id": item_id,
-                    "image_url": str(DEFAULT_IMAGES_DIR / filename),
+                    "image_url": str(_resolve_image_dir(filename) / filename),
                     "filename": filename,
                 }
             else:

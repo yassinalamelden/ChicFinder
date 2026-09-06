@@ -101,9 +101,13 @@ app.include_router(search.router,    prefix=settings.API_V1_STR, tags=["search"]
 # ---------------------------------------------------------------------------
 
 _UPLOADS_DIR = Path("uploads")
-_DATA_DIR    = Path("data/raw_images")
+# data/raw_images/ was consolidated into data/train/ + data/validation/
+# (see (C) DATASET-PLAN.md) -- mount both instead of one now-removed dir.
+_TRAIN_DIR = Path("data/train")
+_VAL_DIR = Path("data/validation")
 _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-_DATA_DIR.mkdir(parents=True, exist_ok=True)
+_TRAIN_DIR.mkdir(parents=True, exist_ok=True)
+_VAL_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +118,8 @@ _DATA_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(_UPLOADS_DIR)), name="uploads")
 
 # Dataset images — served read-only so frontend can display results by URL
-app.mount("/images", StaticFiles(directory=str(_DATA_DIR)), name="images")
+app.mount("/images/train", StaticFiles(directory=str(_TRAIN_DIR)), name="images-train")
+app.mount("/images/validation", StaticFiles(directory=str(_VAL_DIR)), name="images-validation")
 
 
 # ---------------------------------------------------------------------------
