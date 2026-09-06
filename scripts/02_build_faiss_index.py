@@ -8,8 +8,9 @@ Usage:
   python scripts/02_build_faiss_index.py --images data/raw_images
 
 Environment:
-  CLIP_MODEL_PATH  Path to local fine-tuned CLIP model.
-                   Defaults to models/fine_tuned_clip.
+  CLIP_MODEL_PATH  Path to local fine-tuned CLIP model, or a Hugging Face
+                   Hub repo ID. Defaults to models/fine_tuned_clip.
+                   Loaded from .env automatically.
 """
 
 import argparse
@@ -22,6 +23,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from ai_engine.embeddings.database_builder import (
     DEFAULT_IMAGES_DIR,

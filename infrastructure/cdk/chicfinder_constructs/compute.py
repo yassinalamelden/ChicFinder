@@ -75,6 +75,7 @@ class Compute(Construct):
                 "S3_BUCKET_NAME": bucket.bucket_name,
                 "FAISS_INDEX_PATH": FAISS_INDEX_PATH,
                 "FAISS_MAPPING_PATH": FAISS_MAPPING_PATH,
+                "CLIP_MODEL_PATH": "NourAtef112/chicfinder-clip",
             },
             secrets={
                 "OPENROUTER_API_KEY": ecs.Secret.from_secrets_manager(
@@ -166,6 +167,7 @@ class Compute(Construct):
                 "APP_ENV": "production",
                 "DB_SECRET_ARN": database.secret.secret_arn,
                 "S3_BUCKET_NAME": bucket.bucket_name,
+                "CLIP_MODEL_PATH": "NourAtef112/chicfinder-clip",
             },
             logging=ecs.LogDriver.aws_logs(stream_prefix="chicfinder-index-builder"),
         )
