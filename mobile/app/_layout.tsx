@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as SplashScreen from "expo-splash-screen";
+import * as SystemUI from "expo-system-ui";
 import { useFonts } from "expo-font";
 import { Anton_400Regular } from "@expo-google-fonts/anton";
 import {
@@ -20,16 +21,23 @@ import {
 
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { SavedProvider } from "../src/context/SavedContext";
-import { colors, typography } from "../src/theme";
+import { typography, useTheme } from "../src/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
   const { user, initialising } = useAuth();
+  const colors = useTheme();
   const segments = useSegments();
   const router = useRouter();
 
   const ready = fontsReady && !initialising;
+
+  // Paint the window behind the navigator, so switching appearance never
+  // flashes the previous palette during a screen transition.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(colors.bg).catch(() => {});
+  }, [colors.bg]);
 
   useEffect(() => {
     if (!ready) return;
@@ -47,33 +55,39 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
 
   // Holding the splash until the fonts resolve avoids a frame of system-font
   // text, which is jarring when every heading is meant to be Anton.
-  if (!ready) return <View style={styles.splash} />;
+  if (!ready) return <View style={[styles.splash, { backgroundColor: colors.bg }]} />;
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
-        headerTintColor: colors.text,
-        headerTitleStyle: typography.heading,
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: colors.bg },
-      }}
-    >
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="store/[storeId]"
-        options={{ title: "", headerBackTitle: "Back" }}
-      />
-      <Stack.Screen
-        name="delete-account"
-        options={{ title: "Delete account", presentation: "modal" }}
-      />
-    </Stack>
+    <>
+      {/* `auto` flips the status bar between dark and light content to suit
+          whichever palette is showing. */}
+      <StatusBar style="auto" />
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.bg },
+          headerTintColor: colors.text,
+          headerTitleStyle: typography.heading,
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="store/[storeId]"
+          options={{ title: "", headerBackTitle: "Back" }}
+        />
+        <Stack.Screen
+          name="delete-account"
+          options={{ title: "Delete account", presentation: "modal" }}
+        />
+      </Stack>
+    </>
   );
 }
 
-export default function RootLayout() {
+function Root() {
+  const colors = useTheme();
   const [fontsReady, fontError] = useFonts({
     Anton_400Regular,
     Geist_400Regular,
@@ -86,11 +100,10 @@ export default function RootLayout() {
   const canRender = fontsReady || Boolean(fontError);
 
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.bg }]}>
       <SafeAreaProvider>
         <AuthProvider>
           <SavedProvider>
-            <StatusBar style="dark" />
             <RootNavigator fontsReady={canRender} />
           </SavedProvider>
         </AuthProvider>
@@ -99,7 +112,11 @@ export default function RootLayout() {
   );
 }
 
+export default function RootLayout() {
+  return <Root />;
+}
+
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  splash: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1 },
+  splash: { flex: 1 },
 });

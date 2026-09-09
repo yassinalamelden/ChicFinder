@@ -18,9 +18,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
-  userInterfaceStyle: "light",
+  userInterfaceStyle: "automatic",
   backgroundColor: "#edeae2",
-  primaryColor: "#dcff00",
+  primaryColor: "#e9a03c",
   assetBundlePatterns: ["**/*"],
 
   // The splash screen is configured through the expo-splash-screen plugin below;

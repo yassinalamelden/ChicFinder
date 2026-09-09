@@ -1,45 +1,115 @@
 /**
  * Design tokens for the ChicFinder app.
  *
- * These are the brand's real values, measured from the ChicFinder marketing
- * site rather than approximated, so the app and the site read as one product.
- * This is the only file that defines a colour, a size or a face: change it here
- * and the whole app follows.
+ * Two palettes, one set of names. Screens never import a colour directly: they
+ * call `useThemedStyles(makeStyles)` and receive whichever palette matches the
+ * phone's appearance setting, so light and dark stay in step by construction.
  *
- * One rule the palette depends on: `lime` is a FILL, never text. Lime type on
- * the bone background fails contrast badly. Put lime behind something and set
- * that something in `olive`.
+ * Colour roles, so the dark palette inverts correctly instead of guessing:
+ *   bg        the page ground
+ *   surface   raised cards, inputs, rows
+ *   contrast  the heavy block: primary button, stat tile, search dropzone
+ *   accent    amber. A FILL, never text: it fails contrast on both grounds
  */
 
-export const colors = {
-  /** Page ground. */
+import { useColorScheme } from "react-native";
+import { useMemo } from "react";
+import { StyleSheet } from "react-native";
+
+export interface Palette {
+  bg: string;
+  surface: string;
+  surfaceAlt: string;
+  border: string;
+  text: string;
+  muted: string;
+  faint: string;
+  contrast: string;
+  onContrast: string;
+  onContrastMuted: string;
+  accent: string;
+  accentSoft: string;
+  onAccent: string;
+  danger: string;
+  dangerSoft: string;
+  overlay: string;
+  /** Tint for the blurred tab bar, which sits over scrolling content. */
+  glass: string;
+  glassBorder: string;
+  /** expo-blur needs to know which way to blur. */
+  blurTint: "light" | "dark";
+  shadow: string;
+}
+
+const light: Palette = {
   bg: "#edeae2",
-  /** Raised surfaces: cards, inputs, rows. */
-  surface: "#f2efe6",
-  /** Alias kept so existing imports of `card` keep working. */
-  card: "#f2efe6",
-  /** Hairline borders. Deliberately low contrast. */
-  border: "rgba(51, 48, 48, 0.20)",
-  /** Primary text and icons. */
+  surface: "#f6f4ee",
+  surfaceAlt: "#e5e1d7",
+  border: "rgba(51, 48, 48, 0.16)",
   text: "#221e1c",
-  /** Secondary text. */
-  muted: "rgba(52, 49, 48, 0.62)",
-  /** Tertiary text, placeholders, inactive icons. */
+  muted: "rgba(52, 49, 48, 0.64)",
   faint: "rgba(52, 49, 48, 0.42)",
-  /** Dark contrast blocks and the primary button. */
-  olive: "#1e2300",
-  /** The accent. Fills only, never text. */
+  contrast: "#1e2300",
+  onContrast: "#edeae2",
+  onContrastMuted: "rgba(237, 234, 226, 0.62)",
   accent: "#e9a03c",
-  /** Soft accent wash for icon tiles and empty states. */
   accentSoft: "#f4e2c4",
-  /** Destructive. Warmed so it belongs in this palette rather than iOS red. */
+  onAccent: "#1e2300",
   danger: "#a63d2b",
-  /** Text and icons that sit on `olive`. */
-  onOlive: "#edeae2",
-  onOliveMuted: "rgba(237, 234, 226, 0.62)",
-  /** Scrim behind modals. */
+  dangerSoft: "rgba(166, 61, 43, 0.12)",
   overlay: "rgba(30, 35, 0, 0.42)",
-} as const;
+  glass: "rgba(237, 234, 226, 0.72)",
+  glassBorder: "rgba(51, 48, 48, 0.14)",
+  blurTint: "light",
+  shadow: "#2a2618",
+};
+
+/**
+ * Dark is warm, not neutral grey: the ground keeps an olive cast so the amber
+ * still belongs to it. `contrast` inverts to bone, which makes the primary
+ * button light-on-dark exactly as it is dark-on-light in the other palette.
+ */
+const dark: Palette = {
+  bg: "#14150f",
+  surface: "#1e2017",
+  surfaceAlt: "#282b1f",
+  border: "rgba(237, 234, 226, 0.14)",
+  text: "#edeae2",
+  muted: "rgba(237, 234, 226, 0.64)",
+  faint: "rgba(237, 234, 226, 0.40)",
+  contrast: "#edeae2",
+  onContrast: "#14150f",
+  onContrastMuted: "rgba(20, 21, 15, 0.62)",
+  accent: "#e9a03c",
+  accentSoft: "rgba(233, 160, 60, 0.20)",
+  onAccent: "#14150f",
+  danger: "#e0785c",
+  dangerSoft: "rgba(224, 120, 92, 0.16)",
+  overlay: "rgba(0, 0, 0, 0.55)",
+  glass: "rgba(20, 21, 15, 0.68)",
+  glassBorder: "rgba(237, 234, 226, 0.12)",
+  blurTint: "dark",
+  shadow: "#000000",
+};
+
+export const palettes = { light, dark };
+
+export function useTheme(): Palette {
+  const scheme = useColorScheme();
+  return scheme === "dark" ? dark : light;
+}
+
+/**
+ * Builds a StyleSheet from the active palette and rebuilds it when the phone
+ * switches appearance. Screens use this instead of a module-level
+ * StyleSheet.create, which would freeze one palette in place.
+ */
+export function useThemedStyles<T extends StyleSheet.NamedStyles<T>>(
+  factory: (c: Palette) => T
+): T {
+  const colors = useTheme();
+  return useMemo(() => StyleSheet.create(factory(colors)), [colors, factory]);
+}
 
 export const fonts = {
   /** Anton. Uppercase only, by design: it has no lowercase character. */
@@ -61,50 +131,69 @@ export const spacing = {
 export const radius = {
   sm: 12,
   md: 16,
-  lg: 20,
-  xl: 24,
+  lg: 22,
+  xl: 28,
   pill: 999,
 } as const;
 
+/** Height of the floating glass tab bar, so screens can pad clear of it. */
+export const TAB_BAR_HEIGHT = 64;
+
 /**
- * Type ramp. Display styles set `textTransform: uppercase` because Anton has no
- * lowercase glyphs, so anything else renders as small caps at best.
+ * Type ramp.
+ *
+ * Anton's cap height nearly fills its em box, and React Native clips a glyph to
+ * its line box on iOS. A lineHeight near the fontSize therefore shaves the top
+ * off every capital, which is what cropped these headings twice. Display styles
+ * lead at ~1.25x and carry a little top padding, which costs nothing and is the
+ * only thing that reliably keeps Anton intact.
  */
 export const typography = {
   display: {
     fontFamily: fonts.display,
-    fontSize: 38,
-    lineHeight: 42,
-    letterSpacing: -0.4,
+    fontSize: 34,
+    lineHeight: 44,
+    letterSpacing: -0.2,
     textTransform: "uppercase" as const,
+    paddingTop: 4,
   },
   displayLarge: {
     fontFamily: fonts.display,
-    fontSize: 46,
-    lineHeight: 50,
-    letterSpacing: -0.8,
+    fontSize: 44,
+    lineHeight: 56,
+    letterSpacing: -0.6,
     textTransform: "uppercase" as const,
+    paddingTop: 4,
   },
   title: {
     fontFamily: fonts.display,
-    fontSize: 26,
-    lineHeight: 30,
-    letterSpacing: -0.2,
+    fontSize: 24,
+    lineHeight: 32,
+    letterSpacing: -0.1,
     textTransform: "uppercase" as const,
+    paddingTop: 2,
   },
-  heading: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22 },
-  body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 23 },
-  bodyMedium: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 23 },
-  button: { fontFamily: fonts.semibold, fontSize: 15 },
+  heading: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 23 },
+  body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
+  bodyMedium: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 22 },
+  button: { fontFamily: fonts.semibold, fontSize: 16 },
   caption: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
-  /** Small uppercase label: brand names on cards, metadata, section labels. */
   label: {
     fontFamily: fonts.medium,
     fontSize: 11,
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
     textTransform: "uppercase" as const,
   },
 } as const;
+
+/** Soft elevation for cards. Kept subtle: this palette is matte, not glossy. */
+export const elevation = (c: Palette, level: 1 | 2 = 1) => ({
+  shadowColor: c.shadow,
+  shadowOpacity: level === 1 ? 0.06 : 0.1,
+  shadowRadius: level === 1 ? 10 : 20,
+  shadowOffset: { width: 0, height: level === 1 ? 3 : 8 },
+  elevation: level === 1 ? 2 : 6,
+});
 
 export const strings = {
   matchSuffix: "% MATCH",

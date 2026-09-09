@@ -1,18 +1,26 @@
 /**
  * Product card used by search results, store catalogs and the saved list.
  *
- * Hierarchy, deliberately: the image carries the card, then the price, then the
- * name, then the brand as a small uppercase label. The earlier version gave all
- * three text lines near-equal weight and nothing led.
+ * Hierarchy: the image carries the card, then the price, then the name, then
+ * the brand as a small uppercase label.
  */
 
 import React, { useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
-import { colors, radius, spacing, strings, typography } from "../theme";
+import {
+  elevation,
+  radius,
+  spacing,
+  strings,
+  typography,
+  useTheme,
+  useThemedStyles,
+  type Palette,
+} from "../theme";
 import { useSaved } from "../context/SavedContext";
 
 export interface ProductCardData {
@@ -34,6 +42,8 @@ const EGP = new Intl.NumberFormat("en-EG", {
 });
 
 export function ProductCard({ item }: { item: ProductCardData }) {
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { isSaved, toggleSaved } = useSaved();
   const [saveError, setSaveError] = useState(false);
   const saved = isSaved(item.id);
@@ -67,7 +77,7 @@ export function ProductCard({ item }: { item: ProductCardData }) {
         accessibilityLabel={`${item.title ?? "Fashion item"}${
           item.brand ? ` by ${item.brand}` : ""
         }, ${priceLabel}`}
-        style={styles.imageWrap}
+        style={({ pressed }) => [styles.imageWrap, pressed && styles.pressed]}
       >
         {item.imageUrl ? (
           <Image
@@ -79,7 +89,7 @@ export function ProductCard({ item }: { item: ProductCardData }) {
           />
         ) : (
           <View style={[styles.image, styles.imageFallback]}>
-            <Ionicons name="shirt-outline" size={30} color={colors.faint} />
+            <Ionicons name="shirt-outline" size={28} color={colors.faint} />
           </View>
         )}
 
@@ -109,7 +119,7 @@ export function ProductCard({ item }: { item: ProductCardData }) {
           <Ionicons
             name={saved ? "heart" : "heart-outline"}
             size={18}
-            color={colors.olive}
+            color={saved ? colors.onAccent : colors.text}
           />
         </Pressable>
       </Pressable>
@@ -132,66 +142,70 @@ export function ProductCard({ item }: { item: ProductCardData }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => ({
   card: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
+    borderColor: c.border,
+    overflow: "hidden" as const,
+    ...elevation(c, 1),
   },
+  pressed: { opacity: 0.9 },
   imageWrap: {
-    position: "relative",
+    position: "relative" as const,
     aspectRatio: 3 / 4,
-    backgroundColor: "#c9c0b2",
+    backgroundColor: c.surfaceAlt,
   },
-  image: { width: "100%", height: "100%" },
-  imageFallback: { alignItems: "center", justifyContent: "center" },
+  image: { width: "100%" as const, height: "100%" as const },
+  imageFallback: { alignItems: "center" as const, justifyContent: "center" as const },
 
   matchBadge: {
-    position: "absolute",
+    position: "absolute" as const,
     top: 10,
     left: 10,
-    backgroundColor: colors.accent,
+    backgroundColor: c.accent,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: radius.pill,
   },
-  matchText: { ...typography.label, letterSpacing: 0.3, color: colors.olive },
+  matchText: { ...typography.label, letterSpacing: 0.3, color: c.onAccent },
 
   unavailableBadge: {
-    position: "absolute",
+    position: "absolute" as const,
     bottom: 10,
     left: 10,
-    backgroundColor: colors.danger,
+    backgroundColor: c.danger,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: radius.pill,
   },
-  unavailableText: { ...typography.label, color: colors.onOlive },
+  unavailableText: { ...typography.label, color: "#ffffff" },
 
   saveButton: {
-    position: "absolute",
+    position: "absolute" as const,
     top: 10,
     right: 10,
     width: 34,
     height: 34,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderRadius: radius.pill,
-    backgroundColor: "rgba(242, 239, 230, 0.92)",
+    backgroundColor: c.glass,
+    borderWidth: 1,
+    borderColor: c.glassBorder,
   },
-  saveButtonActive: { backgroundColor: colors.accent },
+  saveButtonActive: { backgroundColor: c.accent, borderColor: c.accent },
 
   body: { padding: spacing.md - 2, gap: 3 },
-  brand: { ...typography.label, color: colors.faint },
-  title: { ...typography.body, fontSize: 14, lineHeight: 19, color: colors.text },
+  brand: { ...typography.label, color: c.faint },
+  title: { ...typography.body, fontSize: 14, lineHeight: 19, color: c.text },
   price: {
     ...typography.bodyMedium,
     fontFamily: typography.button.fontFamily,
-    color: colors.text,
+    color: c.text,
     marginTop: 4,
   },
-  saveError: { ...typography.caption, color: colors.danger, marginTop: 2 },
+  saveError: { ...typography.caption, color: c.danger, marginTop: 2 },
 });

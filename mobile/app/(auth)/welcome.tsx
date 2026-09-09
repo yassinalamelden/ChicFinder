@@ -1,8 +1,13 @@
 /**
  * Welcome and sign-in.
  *
- * Sign in with Apple is listed first on iOS, which is both what Apple's Human
- * Interface Guidelines ask for and what reviewers look at under Guideline 4.8.
+ * Sign in with Apple is listed first on iOS, which is what Apple's Human
+ * Interface Guidelines ask for and what reviewers check under Guideline 4.8.
+ *
+ * Both social buttons are always visible. When one is not usable yet (Apple
+ * needs a development build, Google needs client IDs) tapping it says exactly
+ * that, rather than the button vanishing or handing the user an opaque OAuth
+ * error page.
  */
 
 import React, { useState } from "react";
@@ -11,7 +16,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -24,7 +28,14 @@ import Constants from "expo-constants";
 import { Button } from "../../src/components/ui";
 import { useAuth, AuthError } from "../../src/context/AuthContext";
 import { isFirebaseConfigured, missingFirebaseKeys } from "../../src/lib/firebase";
-import { colors, radius, spacing, typography } from "../../src/theme";
+import {
+  radius,
+  spacing,
+  typography,
+  useTheme,
+  useThemedStyles,
+  type Palette,
+} from "../../src/theme";
 
 type Mode = "signIn" | "register";
 
@@ -32,6 +43,8 @@ const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const {
     isAppleAvailable,
     isGoogleReady,
@@ -85,6 +98,16 @@ export default function WelcomeScreen() {
     });
   };
 
+  const appleUnavailable = () =>
+    setError(
+      "Sign in with Apple needs a development build. It will not run inside Expo Go."
+    );
+
+  const googleUnavailable = () =>
+    setError(
+      "Google sign-in is not set up yet. Add the EXPO_PUBLIC_GOOGLE_* client IDs to mobile/.env."
+    );
+
   return (
     <KeyboardAvoidingView
       style={styles.root}
@@ -93,18 +116,22 @@ export default function WelcomeScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.lg },
+          {
+            paddingTop: insets.top + spacing.lg,
+            paddingBottom: insets.bottom + spacing.lg,
+          },
         ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
           <Text style={styles.wordmark}>Chic Finder</Text>
           <Text style={styles.headline}>
-            Find fashion{"\n"}
-            <Text style={styles.headlineMuted}>that fits you.</Text>
+            Snap an outfit.{"\n"}
+            <Text style={styles.headlineMuted}>Find it in Egypt.</Text>
           </Text>
           <Text style={styles.sub}>
-            Snap any outfit. Shop it from Egyptian brands.
+            Photograph any look and match it to real products from Egyptian brands.
           </Text>
         </View>
 
@@ -119,34 +146,44 @@ export default function WelcomeScreen() {
         ) : null}
 
         <View style={styles.actions}>
-          {isAppleAvailable ? (
+          {Platform.OS === "ios" && isAppleAvailable ? (
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              buttonStyle={
+                colors.blurTint === "dark"
+                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+              }
               cornerRadius={radius.pill}
               style={styles.appleButton}
               onPress={() => run("apple", signInWithApple)}
             />
-          ) : null}
-
-          {isGoogleReady ? (
+          ) : Platform.OS === "ios" ? (
             <Button
-              label="Continue with Google"
-              icon="logo-google"
-              variant="secondary"
-              loading={busy === "google"}
+              label="Continue with Apple"
+              icon="logo-apple"
+              variant="primary"
               disabled={busy !== null}
-              onPress={() => run("google", signInWithGoogle)}
+              onPress={appleUnavailable}
             />
           ) : null}
 
-          {isAppleAvailable || isGoogleReady ? (
-            <View style={styles.separator}>
-              <View style={styles.line} />
-              <Text style={styles.separatorText}>or</Text>
-              <View style={styles.line} />
-            </View>
-          ) : null}
+          <Button
+            label="Continue with Google"
+            icon="logo-google"
+            variant="secondary"
+            loading={busy === "google"}
+            disabled={busy !== null}
+            onPress={() =>
+              isGoogleReady ? run("google", signInWithGoogle) : googleUnavailable()
+            }
+          />
+
+          <View style={styles.separator}>
+            <View style={styles.line} />
+            <Text style={styles.separatorText}>or</Text>
+            <View style={styles.line} />
+          </View>
 
           <TextInput
             style={styles.input}
@@ -175,7 +212,7 @@ export default function WelcomeScreen() {
 
           <Button
             label={mode === "signIn" ? "Sign in" : "Create account"}
-            variant="lime"
+            variant="accent"
             arrow
             loading={busy === "email"}
             disabled={busy !== null}
@@ -190,6 +227,7 @@ export default function WelcomeScreen() {
                 setNotice(null);
               }}
               accessibilityRole="button"
+              hitSlop={8}
             >
               <Text style={styles.link}>
                 {mode === "signIn" ? "Create an account" : "I already have an account"}
@@ -197,7 +235,7 @@ export default function WelcomeScreen() {
             </Pressable>
 
             {mode === "signIn" ? (
-              <Pressable onPress={forgotPassword} accessibilityRole="button">
+              <Pressable onPress={forgotPassword} accessibilityRole="button" hitSlop={8}>
                 <Text style={styles.link}>Reset password</Text>
               </Pressable>
             ) : null}
@@ -229,75 +267,79 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (c: Palette) => ({
+  root: { flex: 1, backgroundColor: c.bg },
   content: {
     paddingHorizontal: spacing.lg + 4,
-    gap: spacing.lg + 4,
+    gap: spacing.lg,
     flexGrow: 1,
   },
 
-  hero: { gap: spacing.sm + 2 },
+  hero: { gap: spacing.sm },
   wordmark: {
-    ...typography.title,
-    fontSize: 15,
-    lineHeight: 18,
-    letterSpacing: 1.5,
-    color: colors.text,
+    ...typography.label,
+    fontSize: 12,
+    letterSpacing: 2.4,
+    color: c.faint,
   },
-  headline: { ...typography.displayLarge, color: colors.text },
-  headlineMuted: { color: colors.faint },
-  sub: { ...typography.body, color: colors.muted, maxWidth: 300 },
+  headline: { ...typography.displayLarge, color: c.text },
+  headlineMuted: { color: c.accent },
+  sub: { ...typography.body, color: c.muted, maxWidth: 310 },
+
+  actions: { gap: spacing.sm + 4 },
+  appleButton: { height: 56, width: "100%" as const },
+
+  separator: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  line: { flex: 1, height: 1, backgroundColor: c.border },
+  separatorText: { ...typography.label, color: c.faint },
+
+  input: {
+    minHeight: 56,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg + 2,
+    color: c.text,
+    ...typography.body,
+  },
+
+  switchRow: {
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    paddingTop: spacing.xs,
+  },
+  link: {
+    ...typography.caption,
+    fontFamily: typography.bodyMedium.fontFamily,
+    color: c.text,
+    textDecorationLine: "underline" as const,
+  },
+
+  error: { ...typography.caption, color: c.danger, textAlign: "center" as const },
+  notice: { ...typography.caption, color: c.text, textAlign: "center" as const },
 
   configWarning: {
     gap: spacing.xs,
     padding: spacing.md + 2,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.danger,
-    backgroundColor: "rgba(166, 61, 43, 0.10)",
+    borderColor: c.danger,
+    backgroundColor: c.dangerSoft,
   },
-  configTitle: {
-    ...typography.heading,
-    fontSize: 15,
-    color: colors.danger,
-  },
-  configBody: { ...typography.caption, color: colors.text },
+  configTitle: { ...typography.heading, fontSize: 15, color: c.danger },
+  configBody: { ...typography.caption, color: c.text },
 
-  actions: { gap: spacing.sm + 4 },
-  appleButton: { height: 54, width: "100%" },
-
-  separator: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  line: { flex: 1, height: 1, backgroundColor: colors.border },
-  separatorText: { ...typography.label, color: colors.faint },
-
-  input: {
-    minHeight: 54,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.lg + 2,
-    color: colors.text,
-    ...typography.body,
-  },
-
-  switchRow: { flexDirection: "row", justifyContent: "space-between" },
-  link: {
-    ...typography.caption,
-    fontFamily: typography.bodyMedium.fontFamily,
-    color: colors.text,
-    textDecorationLine: "underline",
-  },
-
-  error: { ...typography.caption, color: colors.danger, textAlign: "center" },
-  notice: { ...typography.caption, color: colors.text, textAlign: "center" },
-
-  legal: { marginTop: "auto", paddingTop: spacing.lg },
+  legal: { marginTop: "auto" as const, paddingTop: spacing.lg },
   legalText: {
     ...typography.caption,
     fontSize: 12,
-    color: colors.faint,
-    textAlign: "center",
+    color: c.faint,
+    textAlign: "center" as const,
   },
 });

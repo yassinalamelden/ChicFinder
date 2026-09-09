@@ -1,13 +1,13 @@
 /**
  * In-app account deletion, required by App Store Guideline 5.1.1(v).
  *
- * The flow is deliberately explicit: the screen states exactly what is deleted,
- * requires the user to type DELETE, and reports the real outcome from the
- * server rather than optimistically claiming success.
+ * Deliberately explicit: the screen states what is deleted, requires the user
+ * to type DELETE, and reports the real outcome from the server rather than
+ * optimistically claiming success.
  */
 
 import React, { useState } from "react";
-import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Linking, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
@@ -15,7 +15,14 @@ import Constants from "expo-constants";
 import { Button } from "../src/components/ui";
 import { useAuth } from "../src/context/AuthContext";
 import { deleteAccount } from "../src/lib/api";
-import { colors, radius, spacing, typography } from "../src/theme";
+import {
+  radius,
+  spacing,
+  typography,
+  useTheme,
+  useThemedStyles,
+  type Palette,
+} from "../src/theme";
 
 const CONFIRM_WORD = "DELETE";
 const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
@@ -28,6 +35,8 @@ const CONSEQUENCES = [
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user, signOut } = useAuth();
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,11 +49,9 @@ export default function DeleteAccountScreen() {
     setError(null);
     try {
       const result = await deleteAccount();
-
       // The backend removes the Firebase user, so the local session now points
       // at an account that no longer exists. Clear it.
       await signOut().catch(() => {});
-
       Alert.alert("Account deleted", result.message, [
         { text: "OK", onPress: () => router.replace("/(auth)/welcome") },
       ]);
@@ -67,9 +74,13 @@ export default function DeleteAccountScreen() {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.warningBadge}>
-        <Ionicons name="warning-outline" size={24} color={colors.danger} />
+        <Ionicons name="warning-outline" size={26} color={colors.danger} />
       </View>
 
       <Text style={styles.title}>This is permanent</Text>
@@ -82,7 +93,7 @@ export default function DeleteAccountScreen() {
         <Text style={styles.listHeading}>What gets deleted</Text>
         {CONSEQUENCES.map((line) => (
           <View key={line} style={styles.listRow}>
-            <Ionicons name="close-circle-outline" size={16} color={colors.danger} />
+            <Ionicons name="close-circle-outline" size={17} color={colors.danger} />
             <Text style={styles.listText}>{line}</Text>
           </View>
         ))}
@@ -144,54 +155,58 @@ export default function DeleteAccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (c: Palette) => ({
+  root: { flex: 1, backgroundColor: c.bg },
   content: { padding: spacing.lg + 4, gap: spacing.md + 2 },
 
   warningBadge: {
-    width: 56,
-    height: 56,
+    width: 60,
+    height: 60,
     borderRadius: radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(166, 61, 43, 0.12)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: c.dangerSoft,
   },
-  title: { ...typography.title, color: colors.text },
-  body: { ...typography.body, color: colors.muted },
+  title: { ...typography.title, color: c.text },
+  body: { ...typography.body, color: c.muted },
 
   list: {
     gap: spacing.sm + 2,
     padding: spacing.md + 4,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
-  listHeading: { ...typography.label, color: colors.faint },
-  listRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm + 2 },
-  listText: { ...typography.body, fontSize: 14, color: colors.text, flex: 1 },
+  listHeading: { ...typography.label, color: c.faint },
+  listRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.sm + 2 },
+  listText: { ...typography.body, fontSize: 14, color: c.text, flex: 1 },
 
-  account: { ...typography.caption, color: colors.muted },
-  accountEmail: { color: colors.text, fontFamily: typography.button.fontFamily },
+  account: { ...typography.caption, color: c.muted },
+  accountEmail: { color: c.text, fontFamily: typography.button.fontFamily },
 
   confirmBlock: { gap: spacing.sm + 2, marginTop: spacing.xs },
-  label: { ...typography.caption, color: colors.muted },
-  confirmWord: { color: colors.danger, fontFamily: typography.button.fontFamily },
+  label: { ...typography.caption, color: c.muted },
+  confirmWord: { color: c.danger, fontFamily: typography.button.fontFamily },
   input: {
-    minHeight: 54,
-    backgroundColor: colors.surface,
+    minHeight: 56,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.lg + 2,
-    color: colors.text,
+    color: c.text,
     letterSpacing: 2,
     ...typography.body,
   },
 
   errorBlock: { gap: spacing.xs },
-  errorText: { ...typography.caption, color: colors.danger },
-  errorHelp: { ...typography.caption, color: colors.text, textDecorationLine: "underline" },
+  errorText: { ...typography.caption, color: c.danger },
+  errorHelp: {
+    ...typography.caption,
+    color: c.text,
+    textDecorationLine: "underline" as const,
+  },
 
   actions: { gap: spacing.sm + 2, marginTop: spacing.md },
 });

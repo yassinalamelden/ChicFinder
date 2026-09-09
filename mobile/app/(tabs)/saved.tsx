@@ -1,10 +1,10 @@
 /**
- * The user's wishlist. Reads through SavedContext so the hearts on this screen
- * and on search results never disagree.
+ * The user's wishlist. Reads through SavedContext so the hearts here and on
+ * search results never disagree.
  */
 
 import React, { useCallback, useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { FlatList, RefreshControl, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 
@@ -12,15 +12,22 @@ import { Button, LoadingState, MessageState, ScreenHeader } from "../../src/comp
 import { ProductCard, type ProductCardData } from "../../src/components/ProductCard";
 import { useSaved } from "../../src/context/SavedContext";
 import { resolveImageUrl } from "../../src/lib/api";
-import { colors, spacing } from "../../src/theme";
+import {
+  TAB_BAR_HEIGHT,
+  spacing,
+  useTheme,
+  useThemedStyles,
+  type Palette,
+} from "../../src/theme";
 
 export default function SavedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { items, loading, error, refresh } = useSaved();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Coming back from a search where something was saved should show it.
   useFocusEffect(
     useCallback(() => {
       refresh();
@@ -45,7 +52,11 @@ export default function SavedScreen() {
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={cards.length ? styles.column : undefined}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.xl },
+        ]}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => <ProductCard item={item} />}
         refreshControl={
           <RefreshControl
@@ -55,7 +66,7 @@ export default function SavedScreen() {
               await refresh();
               setRefreshing(false);
             }}
-            tintColor={colors.text}
+            tintColor={colors.muted}
           />
         }
         ListHeaderComponent={
@@ -85,7 +96,7 @@ export default function SavedScreen() {
               action={
                 <Button
                   label="Find something"
-                  variant="lime"
+                  variant="accent"
                   arrow
                   onPress={() => router.push("/(tabs)/search")}
                 />
@@ -98,12 +109,8 @@ export default function SavedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
-    gap: spacing.md,
-  },
+const makeStyles = (c: Palette) => ({
+  root: { flex: 1, backgroundColor: c.bg },
+  content: { paddingHorizontal: spacing.lg, gap: spacing.md },
   column: { gap: spacing.md },
 });

@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
@@ -12,12 +12,24 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Button, LoadingState, MessageState, ScreenHeader } from "../../src/components/ui";
 import { getStores } from "../../src/lib/api";
-import { colors, radius, spacing, typography } from "../../src/theme";
+import {
+  TAB_BAR_HEIGHT,
+  elevation,
+  radius,
+  spacing,
+  typography,
+  useTheme,
+  useThemedStyles,
+  type Palette,
+} from "../../src/theme";
 import type { Store } from "../../src/types/api";
 
 export default function StoresScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
+
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,7 +70,14 @@ export default function StoresScreen() {
       style={styles.root}
       data={stores}
       keyExtractor={(store) => store.id}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.sm }]}
+      contentContainerStyle={[
+        styles.content,
+        {
+          paddingTop: insets.top + spacing.sm,
+          paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.xl,
+        },
+      ]}
+      showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -66,7 +85,7 @@ export default function StoresScreen() {
             setRefreshing(true);
             load();
           }}
-          tintColor={colors.text}
+          tintColor={colors.muted}
         />
       }
       ListHeaderComponent={
@@ -90,7 +109,7 @@ export default function StoresScreen() {
             {item.logo_url ? (
               <Image source={{ uri: item.logo_url }} style={styles.logo} contentFit="cover" />
             ) : (
-              <Ionicons name="storefront-outline" size={22} color={colors.olive} />
+              <Ionicons name="storefront-outline" size={22} color={colors.onAccent} />
             )}
           </View>
 
@@ -113,47 +132,49 @@ export default function StoresScreen() {
             ) : null}
           </View>
 
-          <Ionicons name="chevron-forward" size={17} color={colors.faint} />
+          <Ionicons name="chevron-forward" size={18} color={colors.faint} />
         </Pressable>
       )}
     />
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
-    gap: spacing.sm + 2,
-  },
+const makeStyles = (c: Palette) => ({
+  root: { flex: 1, backgroundColor: c.bg },
+  content: { paddingHorizontal: spacing.lg, gap: spacing.sm + 2 },
 
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: spacing.md,
-    padding: spacing.md + 2,
-    backgroundColor: colors.surface,
+    padding: spacing.md,
+    backgroundColor: c.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
+    ...elevation(c, 1),
   },
-  rowPressed: { opacity: 0.72 },
+  rowPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
 
   logoWrap: {
-    width: 52,
-    height: 52,
+    width: 54,
+    height: 54,
     borderRadius: radius.md,
-    backgroundColor: colors.accentSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
+    backgroundColor: c.accent,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    overflow: "hidden" as const,
   },
-  logo: { width: "100%", height: "100%" },
+  logo: { width: "100%" as const, height: "100%" as const },
 
   rowBody: { flex: 1, gap: 2 },
-  name: { ...typography.title, fontSize: 19, lineHeight: 21, color: colors.text },
-  description: { ...typography.caption, color: colors.muted, marginTop: 2 },
-  locationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
-  location: { ...typography.label, color: colors.faint, flex: 1 },
+  name: { ...typography.title, fontSize: 19, lineHeight: 25, color: c.text },
+  description: { ...typography.caption, color: c.muted, marginTop: 2 },
+  locationRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    marginTop: 4,
+  },
+  location: { ...typography.label, color: c.faint, flex: 1 },
 });

@@ -1,38 +1,45 @@
 /**
  * Shared building blocks: buttons, screen chrome, empty and error states.
  *
- * The Button here is the brand's signature control: a full pill, optionally
- * carrying a circular arrow badge on the trailing edge. Everything is driven
- * from theme.ts so a palette change never needs a visit to this file.
+ * Everything reads its colours through `useThemedStyles`, so light and dark are
+ * the same component with a different palette rather than two code paths.
  */
 
 import React, { type ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  StyleSheet,
   Text,
   View,
+  StyleSheet,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
-import { colors, radius, spacing, typography } from "../theme";
+import {
+  elevation,
+  radius,
+  spacing,
+  typography,
+  useTheme,
+  useThemedStyles,
+  type Palette,
+} from "../theme";
 
 // ---------------------------------------------------------------------------
 // Button
 // ---------------------------------------------------------------------------
 
-type ButtonVariant = "primary" | "lime" | "secondary" | "danger";
+type ButtonVariant = "primary" | "accent" | "secondary" | "danger";
 
 interface ButtonProps {
   label: string;
   onPress: () => void;
   variant?: ButtonVariant;
   icon?: keyof typeof Ionicons.glyphMap;
-  /** Adds the circular arrow badge. Use it on forward-moving actions only. */
+  /** Adds the circular arrow badge. Forward-moving actions only. */
   arrow?: boolean;
   loading?: boolean;
   disabled?: boolean;
@@ -40,35 +47,18 @@ interface ButtonProps {
   hint?: string;
 }
 
-const palette: Record<
-  ButtonVariant,
-  { bg: string; fg: string; border: string; badge: string }
-> = {
-  primary: {
-    bg: colors.olive,
-    fg: colors.onOlive,
-    border: colors.olive,
-    badge: "rgba(237, 234, 226, 0.18)",
-  },
-  lime: {
-    bg: colors.accent,
-    fg: colors.olive,
-    border: colors.accent,
-    badge: "rgba(30, 35, 0, 0.14)",
-  },
-  secondary: {
-    bg: "transparent",
-    fg: colors.text,
-    border: colors.border,
-    badge: "rgba(52, 49, 48, 0.10)",
-  },
-  danger: {
-    bg: "transparent",
-    fg: colors.danger,
-    border: colors.danger,
-    badge: "rgba(166, 61, 43, 0.12)",
-  },
-};
+function palette(c: Palette, variant: ButtonVariant) {
+  switch (variant) {
+    case "primary":
+      return { bg: c.contrast, fg: c.onContrast, border: c.contrast, badge: "rgba(127,127,127,0.22)" };
+    case "accent":
+      return { bg: c.accent, fg: c.onAccent, border: c.accent, badge: "rgba(30,35,0,0.14)" };
+    case "secondary":
+      return { bg: "transparent", fg: c.text, border: c.border, badge: "rgba(127,127,127,0.14)" };
+    case "danger":
+      return { bg: "transparent", fg: c.danger, border: c.danger, badge: c.dangerSoft };
+  }
+}
 
 export function Button({
   label,
@@ -81,8 +71,10 @@ export function Button({
   style,
   hint,
 }: ButtonProps) {
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const tone = palette(colors, variant);
   const isDisabled = disabled || loading;
-  const tone = palette[variant];
 
   return (
     <Pressable
@@ -99,6 +91,8 @@ export function Button({
         styles.button,
         { backgroundColor: tone.bg, borderColor: tone.border },
         arrow && styles.buttonWithArrow,
+        // A small scale on press is the cheapest thing that makes a control
+        // feel native rather than like a web button.
         pressed && !isDisabled && styles.buttonPressed,
         isDisabled && styles.buttonDisabled,
         style,
@@ -108,7 +102,7 @@ export function Button({
         <ActivityIndicator color={tone.fg} />
       ) : (
         <>
-          {icon ? <Ionicons name={icon} size={18} color={tone.fg} /> : null}
+          {icon ? <Ionicons name={icon} size={19} color={tone.fg} /> : null}
           <Text style={[styles.buttonLabel, { color: tone.fg }]}>{label}</Text>
           {arrow ? (
             <View style={[styles.arrowBadge, { backgroundColor: tone.badge }]}>
@@ -126,9 +120,11 @@ export function Button({
 // ---------------------------------------------------------------------------
 
 export function LoadingState({ label = "Loading" }: { label?: string }) {
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.centered} accessibilityRole="progressbar">
-      <ActivityIndicator color={colors.text} size="large" />
+      <ActivityIndicator color={colors.accent} size="large" />
       <Text style={styles.stateSubtitle}>{label}</Text>
     </View>
   );
@@ -149,20 +145,13 @@ export function MessageState({
   action,
   tone = "neutral",
 }: MessageStateProps) {
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const isError = tone === "error";
   return (
     <View style={styles.centered}>
-      <View
-        style={[
-          styles.stateRing,
-          isError && { backgroundColor: "rgba(166, 61, 43, 0.12)" },
-        ]}
-      >
-        <Ionicons
-          name={icon}
-          size={34}
-          color={isError ? colors.danger : colors.olive}
-        />
+      <View style={[styles.stateRing, isError && { backgroundColor: colors.dangerSoft }]}>
+        <Ionicons name={icon} size={32} color={isError ? colors.danger : colors.accent} />
       </View>
       <Text style={styles.stateTitle}>{title}</Text>
       {subtitle ? <Text style={styles.stateSubtitle}>{subtitle}</Text> : null}
@@ -182,6 +171,7 @@ export function ScreenHeader({
   title: string;
   subtitle?: string;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle} accessibilityRole="header">
@@ -192,61 +182,68 @@ export function ScreenHeader({
   );
 }
 
-/** Small uppercase metadata label. */
 export function Label({ children }: { children: ReactNode }) {
+  const styles = useThemedStyles(makeStyles);
   return <Text style={styles.label}>{children}</Text>;
 }
 
-export function Divider() {
-  return <View style={styles.divider} />;
+/** Card surface with the app's standard elevation. */
+export function Card({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const styles = useThemedStyles(makeStyles);
+  return <View style={[styles.card, style]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Palette) => ({
   button: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: spacing.sm + 2,
-    minHeight: 54,
+    minHeight: 56,
     paddingHorizontal: spacing.lg + 4,
     borderRadius: radius.pill,
     borderWidth: 1,
   },
-  // The badge is inset from the trailing edge, so that side needs less padding.
-  buttonWithArrow: { paddingRight: spacing.sm + 2 },
-  buttonPressed: { opacity: 0.78 },
+  buttonWithArrow: { paddingRight: spacing.sm },
+  buttonPressed: { opacity: 0.85, transform: [{ scale: 0.985 }] },
   buttonDisabled: { opacity: 0.4 },
   buttonLabel: typography.button,
   arrowBadge: {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     borderRadius: radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
 
   centered: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     padding: spacing.xl,
-    gap: spacing.sm + 2,
+    gap: spacing.sm,
   },
   stateRing: {
-    width: 84,
-    height: 84,
+    width: 76,
+    height: 76,
     borderRadius: radius.pill,
-    backgroundColor: colors.accentSoft,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: c.accentSoft,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     marginBottom: spacing.xs,
   },
-  stateTitle: { ...typography.title, color: colors.text },
+  stateTitle: { ...typography.title, color: c.text, textAlign: "center" as const },
   stateSubtitle: {
     ...typography.body,
-    color: colors.muted,
-    textAlign: "center",
-    maxWidth: 260,
+    color: c.muted,
+    textAlign: "center" as const,
+    maxWidth: 270,
   },
   stateAction: { marginTop: spacing.md, minWidth: 210 },
 
@@ -255,18 +252,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
     paddingBottom: spacing.lg,
   },
-  headerTitle: { ...typography.display, color: colors.text },
-  headerSubtitle: {
-    ...typography.body,
-    color: colors.muted,
-    marginTop: spacing.sm,
-  },
+  headerTitle: { ...typography.display, color: c.text },
+  headerSubtitle: { ...typography.body, color: c.muted, marginTop: spacing.xs },
 
-  label: { ...typography.label, color: colors.faint },
+  label: { ...typography.label, color: c.faint },
 
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
+  card: {
+    backgroundColor: c.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: c.border,
+    ...elevation(c, 1),
   },
 });

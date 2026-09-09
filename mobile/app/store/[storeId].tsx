@@ -3,15 +3,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  FlatList,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { FlatList, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,12 +12,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { Button, LoadingState, MessageState } from "../../src/components/ui";
 import { ProductCard, type ProductCardData } from "../../src/components/ProductCard";
 import { getStoreDetail, resolveImageUrl } from "../../src/lib/api";
-import { colors, radius, spacing, typography } from "../../src/theme";
+import {
+  radius,
+  spacing,
+  typography,
+  useTheme,
+  useThemedStyles,
+  type Palette,
+} from "../../src/theme";
 import type { Store, StoreItem } from "../../src/types/api";
 
 const ALL = "All";
 
-/** Category values arrive lowercase from the catalog; chips read better cased. */
+/** Categories arrive lowercase from the catalog; chips read better cased. */
 function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
@@ -32,6 +32,9 @@ function titleCase(value: string): string {
 export default function StoreDetailScreen() {
   const { storeId } = useLocalSearchParams<{ storeId: string }>();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [store, setStore] = useState<Store | null>(null);
   const [items, setItems] = useState<StoreItem[]>([]);
@@ -98,7 +101,11 @@ export default function StoreDetailScreen() {
       keyExtractor={(item) => item.id}
       numColumns={2}
       columnWrapperStyle={cards.length ? styles.column : undefined}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: insets.bottom + spacing.xxl },
+      ]}
+      showsVerticalScrollIndicator={false}
       renderItem={({ item }) => <ProductCard item={item} />}
       ListHeaderComponent={
         <View style={styles.header}>
@@ -107,7 +114,7 @@ export default function StoreDetailScreen() {
               {store.logo_url ? (
                 <Image source={{ uri: store.logo_url }} style={styles.logo} contentFit="cover" />
               ) : (
-                <Ionicons name="storefront-outline" size={28} color={colors.olive} />
+                <Ionicons name="storefront-outline" size={28} color={colors.onAccent} />
               )}
             </View>
             <View style={styles.brandBody}>
@@ -177,45 +184,50 @@ export default function StoreDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
-    gap: spacing.md,
-  },
+const makeStyles = (c: Palette) => ({
+  root: { flex: 1, backgroundColor: c.bg },
+  content: { paddingHorizontal: spacing.lg, gap: spacing.md },
   column: { gap: spacing.md },
 
   header: { gap: spacing.md, paddingBottom: spacing.sm },
-  brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  brandRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.md },
   logoWrap: {
-    width: 68,
-    height: 68,
+    width: 70,
+    height: 70,
     borderRadius: radius.lg,
-    backgroundColor: colors.accentSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
+    backgroundColor: c.accent,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    overflow: "hidden" as const,
   },
-  logo: { width: "100%", height: "100%" },
+  logo: { width: "100%" as const, height: "100%" as const },
   brandBody: { flex: 1 },
-  name: { ...typography.title, color: colors.text },
-  locationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 },
-  location: { ...typography.label, color: colors.faint, flex: 1 },
-  description: { ...typography.body, color: colors.muted },
+  name: { ...typography.title, color: c.text },
+  locationRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    marginTop: 4,
+  },
+  location: { ...typography.label, color: c.faint, flex: 1 },
+  description: { ...typography.body, color: c.muted },
 
   chips: { gap: spacing.sm, paddingVertical: 2 },
   chip: {
     paddingHorizontal: spacing.md + 2,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "transparent",
+    borderColor: c.border,
+    backgroundColor: c.surface,
   },
-  chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText: { ...typography.caption, fontFamily: typography.bodyMedium.fontFamily, color: colors.muted },
-  chipTextActive: { color: colors.olive },
+  chipActive: { backgroundColor: c.accent, borderColor: c.accent },
+  chipText: {
+    ...typography.caption,
+    fontFamily: typography.bodyMedium.fontFamily,
+    color: c.muted,
+  },
+  chipTextActive: { color: c.onAccent },
 
-  count: { ...typography.label, color: colors.faint },
+  count: { ...typography.label, color: c.faint },
 });

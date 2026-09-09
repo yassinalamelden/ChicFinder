@@ -1,21 +1,12 @@
 /**
  * The core screen: take or pick an outfit photo, get matched products.
  *
- * Permission handling matters for App Store review. Both the camera and the
- * library ask only at the moment the user taps the corresponding button, never
- * on screen load, and a denial explains how to fix it instead of failing quietly.
+ * Permissions are requested at the moment the user taps the matching control,
+ * never on screen load, and a denial explains how to fix it.
  */
 
 import React, { useCallback, useState } from "react";
-import {
-  FlatList,
-  Linking,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { FlatList, Linking, Platform, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -24,16 +15,28 @@ import { Ionicons } from "@expo/vector-icons";
 import { Button, LoadingState, MessageState, ScreenHeader } from "../../src/components/ui";
 import { ProductCard, type ProductCardData } from "../../src/components/ProductCard";
 import { searchByPhoto } from "../../src/lib/api";
-import { colors, radius, spacing, strings, typography } from "../../src/theme";
+import {
+  TAB_BAR_HEIGHT,
+  elevation,
+  radius,
+  spacing,
+  strings,
+  typography,
+  useTheme,
+  useThemedStyles,
+  type Palette,
+} from "../../src/theme";
 import type { ChicFinderResult } from "../../src/types/api";
 
 type State = "idle" | "searching" | "results" | "error";
 
-/** Compression, so a 12MP photo does not stall the upload on mobile data. */
 const IMAGE_QUALITY = 0.8;
 
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
+
   const [state, setState] = useState<State>("idle");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [results, setResults] = useState<ChicFinderResult[]>([]);
@@ -56,38 +59,32 @@ export default function SearchScreen() {
   }, []);
 
   const explainDenial = (what: "camera" | "photos") => {
-    setError(
-      `ChicFinder needs ${what} access to search. You can turn it on in Settings.`
-    );
+    setError(`ChicFinder needs ${what} access to search. You can turn it on in Settings.`);
     setState("error");
   };
 
   const takePhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) return explainDenial("camera");
-
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
       quality: IMAGE_QUALITY,
       allowsEditing: true,
     });
     if (result.canceled) return;
-    const asset = result.assets[0];
-    runSearch(asset.uri, asset.mimeType);
+    runSearch(result.assets[0].uri, result.assets[0].mimeType);
   };
 
   const pickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) return explainDenial("photos");
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: IMAGE_QUALITY,
       allowsEditing: true,
     });
     if (result.canceled) return;
-    const asset = result.assets[0];
-    runSearch(asset.uri, asset.mimeType);
+    runSearch(result.assets[0].uri, result.assets[0].mimeType);
   };
 
   const reset = () => {
@@ -115,7 +112,11 @@ export default function SearchScreen() {
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.column}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.xl },
+        ]}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => <ProductCard item={item} />}
         ListHeaderComponent={
           <View>
@@ -140,12 +141,12 @@ export default function SearchScreen() {
             ) : (
               <Pressable
                 onPress={takePhoto}
-                style={styles.dropzone}
                 accessibilityRole="button"
                 accessibilityLabel="Take a photo of an outfit"
+                style={({ pressed }) => [styles.dropzone, pressed && styles.dropzonePressed]}
               >
                 <View style={styles.dropzoneRing}>
-                  <Ionicons name="camera-outline" size={28} color={colors.olive} />
+                  <Ionicons name="camera-outline" size={30} color={colors.onAccent} />
                 </View>
                 <Text style={styles.dropzoneTitle}>Take a photo</Text>
                 <Text style={styles.dropzoneSub}>
@@ -219,66 +220,65 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  listContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
-    gap: spacing.md,
-  },
+const makeStyles = (c: Palette) => ({
+  root: { flex: 1, backgroundColor: c.bg },
+  listContent: { paddingHorizontal: spacing.lg, gap: spacing.md },
   column: { gap: spacing.md },
 
-  // The olive block makes the app's core action the heaviest thing on screen,
-  // and echoes the dark contrast sections on the marketing site.
+  // The heavy block makes the app's core action the anchor of the screen.
   dropzone: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     gap: spacing.xs + 2,
     paddingVertical: spacing.xxl,
     borderRadius: radius.xl,
-    backgroundColor: colors.olive,
+    backgroundColor: c.contrast,
     marginBottom: spacing.md,
+    ...elevation(c, 2),
   },
+  dropzonePressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
   dropzoneRing: {
-    width: 64,
-    height: 64,
+    width: 66,
+    height: 66,
     borderRadius: radius.pill,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.xs + 2,
+    backgroundColor: c.accent,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    marginBottom: spacing.sm,
   },
-  dropzoneTitle: { ...typography.title, fontSize: 24, color: colors.onOlive },
-  dropzoneSub: { ...typography.caption, color: colors.onOliveMuted },
+  dropzoneTitle: { ...typography.title, fontSize: 22, color: c.onContrast },
+  dropzoneSub: { ...typography.caption, color: c.onContrastMuted },
 
-  preview: { position: "relative", marginBottom: spacing.md },
+  preview: { position: "relative" as const, marginBottom: spacing.md },
   previewImage: {
-    width: "100%",
+    width: "100%" as const,
     aspectRatio: 3 / 4,
     maxHeight: 300,
     borderRadius: radius.xl,
-    backgroundColor: "#c9c0b2",
+    backgroundColor: c.surfaceAlt,
   },
   previewClear: {
-    position: "absolute",
+    position: "absolute" as const,
     top: 12,
     right: 12,
-    width: 34,
-    height: 34,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 36,
+    height: 36,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderRadius: radius.pill,
-    backgroundColor: "rgba(242, 239, 230, 0.92)",
+    backgroundColor: c.glass,
+    borderWidth: 1,
+    borderColor: c.glassBorder,
   },
 
-  buttonRow: { flexDirection: "row", gap: spacing.sm + 2 },
+  buttonRow: { flexDirection: "row" as const, gap: spacing.sm + 2 },
   flexButton: { flex: 1 },
 
   resultsMeta: {
     ...typography.label,
-    color: colors.faint,
+    color: c.faint,
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
   },
-  errorActions: { gap: spacing.sm + 2, width: "100%" },
+  errorActions: { gap: spacing.sm + 2, width: "100%" as const },
 });

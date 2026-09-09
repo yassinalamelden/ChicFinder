@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,13 +17,24 @@ import * as Application from "expo-application";
 import { Button, ScreenHeader } from "../../src/components/ui";
 import { useAuth } from "../../src/context/AuthContext";
 import { useSaved } from "../../src/context/SavedContext";
-import { colors, radius, spacing, typography } from "../../src/theme";
+import {
+  TAB_BAR_HEIGHT,
+  elevation,
+  radius,
+  spacing,
+  typography,
+  useTheme,
+  useThemedStyles,
+  type Palette,
+} from "../../src/theme";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user, signOut } = useAuth();
   const { items } = useSaved();
   const [signingOut, setSigningOut] = useState(false);
@@ -53,8 +64,12 @@ export default function ProfileScreen() {
       style={styles.root}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: insets.top + spacing.sm, paddingBottom: insets.bottom + spacing.xxl },
+        {
+          paddingTop: insets.top + spacing.sm,
+          paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.xl,
+        },
       ]}
+      showsVerticalScrollIndicator={false}
     >
       <ScreenHeader title="Profile" />
 
@@ -72,11 +87,9 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <Text style={styles.statValue}>{items.length}</Text>
-          <Text style={styles.statLabel}>Saved items</Text>
-        </View>
+      <View style={styles.stat}>
+        <Text style={styles.statValue}>{items.length}</Text>
+        <Text style={styles.statLabel}>Saved items</Text>
       </View>
 
       <View style={styles.group}>
@@ -128,6 +141,8 @@ function Row({
   label: string;
   onPress: () => void;
 }) {
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <Pressable
       onPress={onPress}
@@ -137,54 +152,55 @@ function Row({
     >
       <Ionicons name={icon} size={19} color={colors.text} />
       <Text style={styles.rowLabel}>{label}</Text>
-      <Ionicons name="chevron-forward" size={17} color={colors.faint} />
+      <Ionicons name="chevron-forward" size={18} color={colors.faint} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.lg, gap: spacing.xl - 8 },
+const makeStyles = (c: Palette) => ({
+  root: { flex: 1, backgroundColor: c.bg },
+  content: { paddingHorizontal: spacing.lg, gap: spacing.lg },
 
-  identity: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  identity: { flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.md },
   avatar: {
     width: 68,
     height: 68,
     borderRadius: radius.pill,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: c.accent,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
-  avatarText: { ...typography.title, fontSize: 30, color: colors.olive },
-  identityBody: { flex: 1, gap: 3 },
-  name: { ...typography.title, color: colors.text },
-  email: { ...typography.caption, color: colors.muted },
+  avatarText: { ...typography.title, fontSize: 28, color: c.onAccent },
+  identityBody: { flex: 1, gap: 2 },
+  name: { ...typography.title, color: c.text },
+  email: { ...typography.caption, color: c.muted },
 
-  statsRow: { flexDirection: "row", gap: spacing.md },
-  // An olive block, so the one number on the screen carries some weight.
+  // The one number on the screen gets the heavy block, so it reads as a stat
+  // rather than another row of text.
   stat: {
-    flex: 1,
-    padding: spacing.md + 4,
-    backgroundColor: colors.olive,
+    padding: spacing.lg,
+    backgroundColor: c.contrast,
     borderRadius: radius.lg,
+    ...elevation(c, 2),
   },
-  statValue: { ...typography.display, fontSize: 40, lineHeight: 40, color: colors.accent },
-  statLabel: { ...typography.label, color: colors.onOliveMuted, marginTop: 6 },
+  statValue: { ...typography.display, fontSize: 44, lineHeight: 54, color: c.accent },
+  statLabel: { ...typography.label, color: c.onContrastMuted, marginTop: 2 },
 
   group: { gap: spacing.sm + 2 },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: spacing.md,
     minHeight: 58,
     paddingHorizontal: spacing.md + 4,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
+    ...elevation(c, 1),
   },
-  rowPressed: { opacity: 0.72 },
-  rowLabel: { ...typography.body, color: colors.text, flex: 1 },
+  rowPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
+  rowLabel: { ...typography.body, color: c.text, flex: 1 },
 
-  version: { ...typography.label, color: colors.faint, textAlign: "center" },
+  version: { ...typography.label, color: c.faint, textAlign: "center" as const },
 });
