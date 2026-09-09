@@ -50,7 +50,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: BUNDLE_ID,
     adaptiveIcon: {
       foregroundImage: "./assets/android-icon-foreground.png",
-      backgroundColor: "#1e2300",
+      backgroundColor: "#0e0f0b",
     },
     permissions: ["android.permission.CAMERA"],
   },
@@ -80,6 +80,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         image: "./assets/splash-icon.png",
         resizeMode: "contain",
         backgroundColor: "#edeae2",
+        // The app follows the phone's appearance, so the launch screen has to
+        // as well. Without this, a dark-mode launch shows an ink mark on bone
+        // and then snaps to a near-black first screen.
+        dark: {
+          image: "./assets/splash-icon-dark.png",
+          resizeMode: "contain",
+          backgroundColor: "#14150f",
+        },
       },
     ],
   ],

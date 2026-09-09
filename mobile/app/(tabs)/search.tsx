@@ -155,7 +155,7 @@ export default function SearchScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Clear photo and start over"
                 >
-                  <Ionicons name="close" size={17} color={colors.text} />
+                  <Ionicons name="close" size={18} color="#edeae2" />
                 </Pressable>
               </View>
             ) : (
@@ -286,26 +286,40 @@ const makeStyles = (c: Palette) => ({
   dropzoneTitle: { ...typography.title, fontSize: 22, color: c.onContrast },
   dropzoneSub: { ...typography.caption, color: c.onContrastMuted },
 
-  preview: { position: "relative" as const, marginBottom: spacing.md },
-  previewImage: {
+  /**
+   * The frame owns the size and the clipping, and the photo fills it.
+   *
+   * The previous version put `aspectRatio` and `maxHeight` on the image itself.
+   * Yoga resolves aspectRatio against the clamped height, so the photo came out
+   * 225pt wide inside a full-width row: the picture sat left of the page and
+   * the clear button, anchored to the row rather than to the photo, floated off
+   * to its right. One box with the ratio on it fixes both at once.
+   */
+  preview: {
+    position: "relative" as const,
     width: "100%" as const,
-    aspectRatio: 3 / 4,
-    maxHeight: 300,
+    aspectRatio: 4 / 5,
     borderRadius: radius.xl,
+    overflow: "hidden" as const,
     backgroundColor: c.surfaceAlt,
+    marginBottom: spacing.md,
+    ...elevation(c, 2),
   },
+  previewImage: { width: "100%" as const, height: "100%" as const },
   previewClear: {
     position: "absolute" as const,
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
+    top: spacing.sm + 2,
+    right: spacing.sm + 2,
+    width: 38,
+    height: 38,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     borderRadius: radius.pill,
-    backgroundColor: c.glass,
+    // Sits over photography, so it carries its own ground rather than the
+    // page's: a translucent tint would vanish against a light shot.
+    backgroundColor: "rgba(20, 21, 15, 0.55)",
     borderWidth: 1,
-    borderColor: c.glassBorder,
+    borderColor: "rgba(237, 234, 226, 0.35)",
   },
 
   resultsMeta: {

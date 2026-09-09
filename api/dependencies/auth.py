@@ -42,3 +42,19 @@ async def get_current_user(authorization: str = Header(default=None)) -> dict:
 
     # Fall back to dev stub when credentials are not configured
     return {"uid": "dev-user", "email": "dev@chicfinder.local"}
+
+
+async def get_optional_user(authorization: str = Header(default=None)):
+    """
+    Identify the caller when possible, and let them through when not.
+
+    For endpoints that are open to everyone but still worth attributing when a
+    signed-in person uses them. Photo search is the case that matters: making it
+    require an account turns the app's first action into a sign-up wall, which
+    is the opposite of the product. Returns None for a guest, and also for a
+    token that fails to verify: a bad token is a guest, not an error, on a route
+    that does not need one.
+    """
+    if not authorization:
+        return None
+    return verify_firebase_token(authorization)

@@ -105,8 +105,15 @@ export function Button({
         <>
           {icon ? <Ionicons name={icon} size={19} color={tone.fg} /> : null}
           <Text style={[styles.buttonLabel, { color: tone.fg }]}>{label}</Text>
+          {/* Absolutely positioned rather than laid out in the row: as a row
+              child it pushes the label off-centre, which is exactly what looks
+              wrong on a wide button. Out of flow, the label centres on the
+              button and the badge still sits at the right edge. */}
           {arrow ? (
-            <View style={[styles.arrowBadge, { backgroundColor: tone.badge }]}>
+            <View
+              style={[styles.arrowBadge, { backgroundColor: tone.badge }]}
+              pointerEvents="none"
+            >
               <Ionicons name="arrow-forward" size={15} color={tone.fg} />
             </View>
           ) : null}
@@ -324,11 +331,14 @@ const makeStyles = (c: Palette) => ({
     borderRadius: radius.pill,
     borderWidth: 1,
   },
-  buttonWithArrow: { paddingRight: spacing.sm },
+  // Room for the badge on both sides, so the label sits on the true centre.
+  buttonWithArrow: { paddingHorizontal: 46 },
   buttonPressed: { opacity: 0.85, transform: [{ scale: 0.985 }] },
   buttonDisabled: { opacity: 0.4 },
   buttonLabel: typography.button,
   arrowBadge: {
+    position: "absolute" as const,
+    right: spacing.sm,
     width: 32,
     height: 32,
     borderRadius: radius.pill,
@@ -403,11 +413,13 @@ const makeStyles = (c: Palette) => ({
     textAlign: "center" as const,
     maxWidth: 270,
   },
+  // No alignSelf: "stretch" here. Stretching wins over the parent's centring
+  // and pushes the control to the full width of the screen, which is what made
+  // the sign-in button look wrong next to a centred title.
   stateAction: {
     marginTop: spacing.lg,
-    alignSelf: "stretch" as const,
-    maxWidth: 280,
     width: "100%" as const,
+    maxWidth: 300,
   },
 
   header: {

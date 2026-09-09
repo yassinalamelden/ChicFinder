@@ -45,19 +45,38 @@ async function getToken(): Promise<string> {
   return user.getIdToken();
 }
 
+/**
+ * `true`  the call is meaningless without an account, so fail early and clearly
+ * `false` a public endpoint, never send a token
+ * "optional" send a token when there is one
+ *
+ * The third mode is what makes guest mode real. Photo search is open to
+ * everyone, but a signed-in person should still be identified so the backend
+ * can attribute the search, and the old boolean had no way to say that: it sent
+ * either a token or nothing, and demanding one turned the app's core action
+ * into a sign-in wall.
+ */
+type AuthMode = boolean | "optional";
+
 interface RequestOptions extends RequestInit {
   timeoutMs?: number;
-  auth?: boolean;
+  auth?: AuthMode;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { timeoutMs = DEFAULT_TIMEOUT_MS, auth: needsAuth = true, ...init } = options;
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, auth: authMode = true, ...init } = options;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   const headers: Record<string, string> = { ...(init.headers as Record<string, string>) };
-  if (needsAuth) headers.Authorization = `Bearer ${await getToken()}`;
+  if (authMode === true) {
+    headers.Authorization = `Bearer ${await getToken()}`;
+  } else if (authMode === "optional" && auth?.currentUser) {
+    // A token failure here must not sink a search a guest could have run.
+    const token = await auth.currentUser.getIdToken().catch(() => null);
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
 
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
@@ -144,6 +163,9 @@ export async function searchByPhoto(
     method: "POST",
     body: form,
     timeoutMs: SEARCH_TIMEOUT_MS,
+    // Guests search too. That is the whole funnel: search, like something,
+    // then sign in to keep it.
+    auth: "optional",
   });
 
   const raw = data.recommendations?.[0]?.recommendations ?? [];

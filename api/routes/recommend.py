@@ -2,7 +2,7 @@
 api/routes/recommend.py
 ========================
 POST /upload   — save image, return URL (auth-gated)
-POST /recommend — real FashionCLIP+FAISS visual similarity pipeline
+POST /recommend — real FashionCLIP+FAISS visual similarity pipeline (open to guests)
 """
 
 import uuid
@@ -20,7 +20,7 @@ from api.services.recommendation_service import get_recommendation_service
 from ai_engine.embeddings.encoder import get_encoder
 from ai_engine.embeddings.vector_store import FAISSVectorStore
 
-from api.dependencies.auth import get_current_user
+from api.dependencies.auth import get_current_user, get_optional_user
 from api.models.schemas import RecommendedItem, RecommendationResponse
 
 logger = logging.getLogger(__name__)
@@ -79,8 +79,10 @@ async def upload_image(
 @router.post("/recommend")
 async def get_recommendations(
     file: UploadFile = File(...),
-    user: dict = Depends(get_current_user),
+    user=Depends(get_optional_user),
 ):
+    """Visual search. Open to guests; a signed-in caller is identified but not
+    required, so the app's core action works before the first sign-up."""
     suffix = Path(file.filename or "image.png").suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail="Invalid file type. Images only.")

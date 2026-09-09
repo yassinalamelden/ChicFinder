@@ -19,16 +19,19 @@ search, the hanger is what you are searching for.
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 from PIL import Image, ImageDraw
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 
-BG = (30, 35, 0, 255)         # colors.olive, the brand dark block
-ACCENT = (233, 160, 60, 255)  # colors.accent, warm amber
-OLIVE = (30, 35, 0, 255)      # colors.olive, for marks drawn on the bone splash
-BONE = (237, 234, 226, 255)   # colors.bg
+# Black ground, white mark. A single-colour glyph on near-black reads at every
+# size a home screen renders, which a two-tone mark on olive did not: at 60pt
+# the amber-on-olive version lost its brackets entirely.
+BG = (14, 15, 11, 255)        # near-black, warmed very slightly toward the olive
+BONE = (237, 234, 226, 255)   # colors.bg, the mark
+INK = (20, 21, 15, 255)       # for the mark on the light splash
 SIZE = 1024
 
 # Supersampling factor. Drawing large and downscaling gives clean curves without
@@ -42,7 +45,7 @@ def _canvas(transparent: bool) -> tuple[Image.Image, ImageDraw.ImageDraw]:
     return img, ImageDraw.Draw(img)
 
 
-def _draw_mark(draw: ImageDraw.ImageDraw, scale: float, color=ACCENT) -> None:
+def _draw_mark(draw: ImageDraw.ImageDraw, scale: float, color=BONE) -> None:
     """Draws the viewfinder-plus-hanger mark, centred, at the given scale.
 
     `scale` is a fraction of the full canvas the mark should occupy.
@@ -73,17 +76,28 @@ def _draw_mark(draw: ImageDraw.ImageDraw, scale: float, color=ACCENT) -> None:
         r = stroke / 2
         draw.ellipse([x0 - r, y0 - r, x0 + r, y0 + r], fill=color)
 
-    # Hanger. Laid out so the whole group is vertically centred in the frame:
-    # the hook's top and the bar sit at roughly equal distances from `centre`.
-    hanger_width = span * 0.50
-    bar_y = centre + span * 0.18       # bottom bar
-    apex_y = centre + span * 0.02      # where the two shoulders meet
-    stem_top_y = centre - span * 0.10  # where the vertical stem meets the hook
-    hook_r = span * 0.075
+    # ── Hanger ──────────────────────────────────────────────────────────────
+    #
+    # Proportions are stated as fractions of the frame so the mark holds
+    # together at every export size. The group is measured, then shifted so its
+    # own bounding box is centred in the frame rather than the apex being
+    # centred, which is what made the old mark sit low and read lopsided.
+    hanger_width = span * 0.52
+    hook_r = span * 0.105
 
-    bar_stroke = stroke * 0.95
-    w = int(bar_stroke)
-    cap = bar_stroke / 2
+    bar_y = span * 0.17          # the bottom bar
+    apex_y = -span * 0.02        # where the two shoulders meet the stem
+    stem_top_y = -span * 0.095  # where the stem hands over to the hook
+
+    top = stem_top_y - hook_r
+    offset = centre - (top + bar_y) / 2   # centres the hanger's own extent
+
+    bar_y += offset
+    apex_y += offset
+    stem_top_y += offset
+
+    w = int(stroke * 0.95)
+    cap = stroke * 0.95 / 2
 
     def dot(x: float, y: float) -> None:
         """Round cap, since PIL's line ends are square."""
@@ -110,18 +124,23 @@ def _draw_mark(draw: ImageDraw.ImageDraw, scale: float, color=ACCENT) -> None:
     # Stem: straight up from the apex to where the hook begins.
     draw.line([(centre, apex_y), (centre, stem_top_y)], fill=color, width=w)
 
-    # Hook: a half circle whose left end meets the top of the stem exactly, so
-    # the two read as one continuous line.
+    # Hook. A half circle stopped dead at three o'clock, which the old version
+    # drew, reads as a stub rather than a hook. Carrying the arc past the right
+    # side and down to about four o'clock gives the tip the inward curl that
+    # makes the shape legible as a coat hanger at 40pt.
     hook_cx = centre + hook_r
-    draw.arc(
-        [hook_cx - hook_r, stem_top_y - hook_r, hook_cx + hook_r, stem_top_y + hook_r],
-        start=180,
-        end=360,
-        fill=color,
-        width=w,
-    )
+    box = [
+        hook_cx - hook_r,
+        stem_top_y - hook_r,
+        hook_cx + hook_r,
+        stem_top_y + hook_r,
+    ]
+    draw.arc(box, start=178, end=382, fill=color, width=w)
     dot(centre, stem_top_y)
-    dot(centre + 2 * hook_r, stem_top_y)
+
+    # Round the free tip, at the arc's end angle.
+    end_rad = math.radians(382)
+    dot(hook_cx + hook_r * math.cos(end_rad), stem_top_y + hook_r * math.sin(end_rad))
 
 
 def _save(img: Image.Image, name: str, size: int = SIZE, drop_alpha: bool = False) -> None:
@@ -142,7 +161,7 @@ def main() -> None:
 
     # App Store icon: opaque background, mark at a comfortable margin.
     img, draw = _canvas(transparent=False)
-    _draw_mark(draw, scale=0.58)
+    _draw_mark(draw, scale=0.62)
     _save(img, "icon.png", drop_alpha=True)
     _save(img, "favicon.png", size=48, drop_alpha=True)
 
@@ -153,11 +172,16 @@ def main() -> None:
     _save(img, "adaptive-icon.png")
     _save(img, "android-icon-foreground.png")
 
-    # Splash mark: transparent, and drawn in OLIVE because the splash background
-    # is bone. A lime mark there would be invisible.
+    # Splash marks. Two of them, because the launch screen follows the phone's
+    # appearance: an ink mark on the bone background, and a bone mark on the
+    # black one. A single asset would be invisible in one of the two.
     img, draw = _canvas(transparent=True)
-    _draw_mark(draw, scale=0.50, color=OLIVE)
+    _draw_mark(draw, scale=0.50, color=INK)
     _save(img, "splash-icon.png")
+
+    img, draw = _canvas(transparent=True)
+    _draw_mark(draw, scale=0.50, color=BONE)
+    _save(img, "splash-icon-dark.png")
 
     print("Done.")
 
