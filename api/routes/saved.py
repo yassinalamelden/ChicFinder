@@ -21,6 +21,7 @@ catalog change never makes a user's wishlist disappear.
 from __future__ import annotations
 
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
@@ -39,14 +40,14 @@ _MAX_ITEM_ID_LEN = 128
 
 class SavedItem(BaseModel):
     id: str
-    name: str | None = None
-    brand: str | None = None
-    category: str | None = None
-    price_egp: float | None = None
-    image_url: str | None = None
-    product_url: str | None = None
-    store_id: str | None = None
-    store_location: str | None = None
+    name: Optional[str] = None
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    price_egp: Optional[float] = None
+    image_url: Optional[str] = None
+    product_url: Optional[str] = None
+    store_id: Optional[str] = None
+    store_location: Optional[str] = None
 
 
 class SavedItemsResponse(BaseModel):

@@ -23,6 +23,7 @@ the app can tell the user honestly that deletion did not complete.
 from __future__ import annotations
 
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -39,7 +40,7 @@ router = APIRouter()
 
 class AccountResponse(BaseModel):
     uid: str
-    email: str | None = None
+    email: Optional[str] = None
 
 
 class DeletionResponse(BaseModel):

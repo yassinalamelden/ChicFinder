@@ -112,3 +112,28 @@ The saved-items table needs its migration applied once:
 ```bash
 psql "$DATABASE_URL" -f ../scripts/migrations/001_saved_items.sql
 ```
+
+## Testing locally without the real catalog
+
+The production catalog lives in RDS and S3, so a fresh clone has no products to
+render and the Stores and Saved screens look broken when they are only empty.
+Generate throwaway sample data instead:
+
+```bash
+python3 scripts/generate_sample_catalog.py   # from the project root
+```
+
+That writes `stores.json`, `products.json` and placeholder images into
+`data/raw_images/`, all of which are gitignored. Restart the API to pick them up.
+
+What this does and does not unlock:
+
+| Feature | Works with sample data |
+|---|---|
+| Stores tab, store detail, category filter | yes |
+| Product cards, images, prices | yes |
+| Saving and unsaving | needs a local Postgres and the migration above |
+| Photo search | no, needs the real product images and a built FAISS index |
+
+Photo search cannot be faked usefully: it needs the actual catalog images to
+embed. Get those from the team rather than trying to work around it.
