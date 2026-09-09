@@ -24,6 +24,12 @@ import {
   Segmented,
 } from "../../src/components/ui";
 import { ProductCard, type ProductCardData } from "../../src/components/ProductCard";
+import {
+  DEFAULT_FILTERS,
+  ResultFilters,
+  applyFilters,
+  type FilterState,
+} from "../../src/components/ResultFilters";
 import { getStores, resolveImageUrl, searchItems } from "../../src/lib/api";
 import {
   TAB_BAR_HEIGHT,
@@ -56,6 +62,7 @@ export default function StoresScreen() {
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<Scope>("brands");
   const [scrolled, setScrolled] = useState(false);
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [items, setItems] = useState<StoreItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
   const [itemsError, setItemsError] = useState<string | null>(null);
@@ -128,7 +135,7 @@ export default function StoresScreen() {
     );
   }, [stores, query]);
 
-  const cards: ProductCardData[] = items.map((item) => ({
+  const found: ProductCardData[] = items.map((item) => ({
     id: item.id,
     title: item.name,
     brand: item.brand,
@@ -136,6 +143,14 @@ export default function StoresScreen() {
     imageUrl: resolveImageUrl(item.image_url),
     productUrl: item.product_url,
   }));
+
+  // A new query brings a new set of brands, so an old brand filter would
+  // silently hide everything.
+  useEffect(() => {
+    setFilters(DEFAULT_FILTERS);
+  }, [query, scope]);
+
+  const cards = applyFilters(found, filters);
 
   /**
    * Pinned, not a ListHeaderComponent.
@@ -164,6 +179,14 @@ export default function StoresScreen() {
         <Text style={styles.count}>
           {cards.length} {cards.length === 1 ? "item" : "items"}
         </Text>
+      ) : null}
+      {scope === "items" ? (
+        <ResultFilters
+          cards={found}
+          value={filters}
+          onChange={setFilters}
+          hasMatchScores={false}
+        />
       ) : null}
     </View>
   );

@@ -3,7 +3,7 @@
  * whether a cold start lands on the welcome screen or the tabs.
  */
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -21,6 +21,7 @@ import {
 
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { SavedProvider } from "../src/context/SavedContext";
+import { hasOnboarded } from "../src/lib/onboarding";
 import { ThemeProvider, typography, useTheme } from "../src/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -31,7 +32,15 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
   const segments = useSegments();
   const router = useRouter();
 
-  const ready = fontsReady && !initialising;
+  // null until the flag has been read. Deciding on a pending read would flash
+  // the walkthrough at someone who dismissed it months ago.
+  const [onboarded, setOnboarded] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    hasOnboarded().then(setOnboarded);
+  }, []);
+
+  const ready = fontsReady && !initialising && onboarded !== null;
 
   // Paint the window behind the navigator, so switching appearance never
   // flashes the previous palette during a screen transition.
@@ -44,14 +53,22 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
 
     SplashScreen.hideAsync().catch(() => {});
 
-    // The only redirect left: if the user signs in while the sign-in sheet is
+    // First launch goes to the walkthrough. Only on a cold start into the tabs:
+    // sending someone there from a deep link or the sign-in sheet would throw
+    // away where they were actually headed.
+    if (onboarded === false && segments[0] === "(tabs)") {
+      router.replace("/onboarding");
+      return;
+    }
+
+    // The only other redirect: if the user signs in while the sign-in sheet is
     // open, close it and return them to whatever sent them there. Signed-out
     // users are NOT pushed anywhere; browsing works without an account.
     if (user && segments[0] === "(auth)") {
       if (router.canGoBack()) router.back();
       else router.replace("/(tabs)/search");
     }
-  }, [user, ready, segments, router]);
+  }, [user, ready, segments, router, onboarded]);
 
   // Holding the splash until the fonts resolve avoids a frame of system-font
   // text, which is jarring when every heading is meant to be Anton.
@@ -76,9 +93,14 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
           options={{ headerShown: false, presentation: "modal" }}
         />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen
           name="store/[storeId]"
           options={{ title: "", headerBackTitle: "Back" }}
+        />
+        <Stack.Screen
+          name="item/[itemId]"
+          options={{ title: "", headerBackTitle: "Back", headerTransparent: true }}
         />
         <Stack.Screen
           name="delete-account"

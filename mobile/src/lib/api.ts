@@ -231,6 +231,13 @@ export function searchItems(
   return request<StoreItem[]>(`/api/v1/items${qs}`, { auth: false });
 }
 
+/** One item, for the detail screen. */
+export function getItem(itemId: string): Promise<StoreItem> {
+  return request<StoreItem>(`/api/v1/items/${encodeURIComponent(itemId)}`, {
+    auth: false,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Saved items
 // ---------------------------------------------------------------------------

@@ -156,3 +156,29 @@ async def search_items(
         products = [p for _, p in matches]
 
     return [_product_to_store_item(p) for p in products[:limit]]
+
+
+# ---------------------------------------------------------------------------
+# GET /items/{item_id}
+# ---------------------------------------------------------------------------
+
+@router.get("/items/{item_id}", response_model=StoreItem)
+async def get_item(item_id: str, request: Request):
+    """
+    One item, for the in-app detail screen.
+
+    Registered after `/items` so the literal path wins over this one. Starlette
+    matches routes in order, and a bare `/items` would otherwise be swallowed
+    here with item_id empty.
+    """
+    lookup = getattr(request.app.state, "products_lookup", None)
+    product = lookup.get(item_id) if lookup else None
+
+    if product is None:
+        products = getattr(request.app.state, "products", [])
+        product = next((p for p in products if p.get("id") == item_id), None)
+
+    if product is None:
+        raise HTTPException(status_code=404, detail=f"Item '{item_id}' not found.")
+
+    return _product_to_store_item(product)

@@ -1,21 +1,39 @@
 /**
  * The core screen: take or pick an outfit photo, get matched products.
  *
+ * It also accepts words. A photo is the point of the product, but it is not
+ * always available: the camera roll has nothing useful, the lighting is wrong,
+ * or the person already knows they want a linen shirt. Typing runs against the
+ * same catalog endpoint the Stores tab uses, so the app always has something to
+ * do rather than dead-ending on a failed match.
+ *
  * Permissions are requested at the moment the user taps the matching control,
  * never on screen load, and a denial explains how to fix it.
  */
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Linking, Platform, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 
-import { Button, LoadingState, MessageState, ScreenHeader } from "../../src/components/ui";
+import {
+  Button,
+  LoadingState,
+  MessageState,
+  ScreenHeader,
+  SearchField,
+} from "../../src/components/ui";
 import { ProductCard, type ProductCardData } from "../../src/components/ProductCard";
 import { RecentSearches } from "../../src/components/RecentSearches";
-import { searchByPhoto } from "../../src/lib/api";
+import {
+  DEFAULT_FILTERS,
+  ResultFilters,
+  applyFilters,
+  type FilterState,
+} from "../../src/components/ResultFilters";
+import { resolveImageUrl, searchByPhoto, searchItems } from "../../src/lib/api";
 import {
   addRecent,
   clearRecent,
@@ -34,11 +52,17 @@ import {
   useThemedStyles,
   type Palette,
 } from "../../src/theme";
-import type { ChicFinderResult } from "../../src/types/api";
+import type { ChicFinderResult, StoreItem } from "../../src/types/api";
 
 type State = "idle" | "searching" | "results" | "error";
 
 const IMAGE_QUALITY = 0.8;
+
+/** Long enough that typing a word is one request, short enough to feel live. */
+const DEBOUNCE_MS = 350;
+
+/** Below this a query matches most of the catalog, which is not a search. */
+const MIN_QUERY = 2;
 
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
@@ -52,6 +76,15 @@ export default function SearchScreen() {
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentSearch[]>([]);
 
+  const [query, setQuery] = useState("");
+  const [textItems, setTextItems] = useState<StoreItem[]>([]);
+  const [textLoading, setTextLoading] = useState(false);
+  const [textError, setTextError] = useState<string | null>(null);
+
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+
+  const textActive = query.trim().length >= MIN_QUERY;
+
   useEffect(() => {
     loadRecent().then(setRecent);
   }, []);
@@ -60,6 +93,7 @@ export default function SearchScreen() {
     setPhotoUri(uri);
     setState("searching");
     setError(null);
+    setFilters(DEFAULT_FILTERS);
     try {
       const data = await searchByPhoto(uri, mimeType);
       setResults(data.results);
@@ -77,6 +111,47 @@ export default function SearchScreen() {
   const forgetRecent = useCallback((uri: string) => {
     dropRecent(uri).then(setRecent);
   }, []);
+
+  // Guards against a slow early request landing after a later one and
+  // overwriting fresher results.
+  const requestId = useRef(0);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < MIN_QUERY) {
+      setTextItems([]);
+      setTextError(null);
+      setTextLoading(false);
+      return;
+    }
+
+    const id = ++requestId.current;
+    setTextLoading(true);
+    const timer = setTimeout(() => {
+      searchItems({ search: trimmed })
+        .then((found) => {
+          if (id !== requestId.current) return;
+          setTextItems(found);
+          setTextError(null);
+        })
+        .catch((err: Error) => {
+          if (id !== requestId.current) return;
+          setTextItems([]);
+          setTextError(err.message);
+        })
+        .finally(() => {
+          if (id === requestId.current) setTextLoading(false);
+        });
+    }, DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // A new query is a new set of brands, so an old brand filter would silently
+  // hide everything.
+  useEffect(() => {
+    setFilters(DEFAULT_FILTERS);
+  }, [query]);
 
   const explainDenial = (what: "camera" | "photos") => {
     setError(`ChicFinder needs ${what} access to search. You can turn it on in Settings.`);
@@ -112,78 +187,122 @@ export default function SearchScreen() {
     setPhotoUri(null);
     setResults([]);
     setError(null);
+    setFilters(DEFAULT_FILTERS);
   };
 
-  const cards: ProductCardData[] = results.map((r) => ({
-    id: r.image_id,
-    title: r.title,
-    brand: r.brand,
-    priceEgp: r.price_egp,
-    imageUrl: r.image_url,
-    productUrl: r.product_url,
-    matchScore: r.similarity_score,
-    available: r.availability_egypt,
-  }));
+  const photoCards: ProductCardData[] = useMemo(
+    () =>
+      results.map((r) => ({
+        id: r.image_id,
+        title: r.title,
+        brand: r.brand,
+        priceEgp: r.price_egp,
+        imageUrl: r.image_url,
+        productUrl: r.product_url,
+        matchScore: r.similarity_score,
+        available: r.availability_egypt,
+      })),
+    [results]
+  );
+
+  const textCards: ProductCardData[] = useMemo(
+    () =>
+      textItems.map((item) => ({
+        id: item.id,
+        title: item.name,
+        brand: item.brand,
+        priceEgp: item.price_egp,
+        imageUrl: resolveImageUrl(item.image_url),
+        productUrl: item.product_url,
+      })),
+    [textItems]
+  );
+
+  const source = textActive ? textCards : state === "results" ? photoCards : [];
+  const cards = useMemo(() => applyFilters(source, filters), [source, filters]);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + spacing.sm }]}>
       <FlatList
-        data={state === "results" ? cards : []}
+        data={cards}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        columnWrapperStyle={styles.column}
+        columnWrapperStyle={cards.length ? styles.column : undefined}
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.xl },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => <ProductCard item={item} />}
         ListHeaderComponent={
           <View>
             <ScreenHeader
+              flush
               title="Find your look"
               subtitle="Photograph an outfit and match it to Egyptian brands."
             />
 
-            {photoUri ? (
-              <View style={styles.preview}>
-                <Image source={{ uri: photoUri }} style={styles.previewImage} contentFit="cover" />
-                <Pressable
-                  onPress={reset}
-                  style={styles.previewClear}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear photo and start over"
-                >
-                  <Ionicons name="close" size={18} color="#edeae2" />
-                </Pressable>
-              </View>
-            ) : (
-              <Pressable
-                onPress={takePhoto}
-                accessibilityRole="button"
-                accessibilityLabel="Take a photo of an outfit"
-                style={({ pressed }) => [styles.dropzone, pressed && styles.dropzonePressed]}
-              >
-                <View style={styles.dropzoneRing}>
-                  <Ionicons name="camera-outline" size={30} color={colors.onAccent} />
-                </View>
-                <Text style={styles.dropzoneTitle}>Take a photo</Text>
-                <Text style={styles.dropzoneSub}>
-                  Frame the full outfit for the best matches
-                </Text>
-              </Pressable>
-            )}
-
-            <Button
-              label="Choose from photos"
-              icon="images-outline"
-              variant="secondary"
-              onPress={pickPhoto}
-              disabled={state === "searching"}
+            <SearchField
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Or search by name, colour, brand"
+              style={styles.field}
             />
 
-            {state === "idle" ? (
+            {/* Typing takes the screen over: the camera block is a large target
+                that would push every text result below the fold. */}
+            {textActive ? null : (
+              <>
+                {photoUri ? (
+                  <View style={styles.preview}>
+                    <Image
+                      source={{ uri: photoUri }}
+                      style={styles.previewImage}
+                      contentFit="cover"
+                    />
+                    <Pressable
+                      onPress={reset}
+                      style={styles.previewClear}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear photo and start over"
+                    >
+                      <Ionicons name="close" size={18} color="#edeae2" />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={takePhoto}
+                    accessibilityRole="button"
+                    accessibilityLabel="Take a photo of an outfit"
+                    style={({ pressed }) => [
+                      styles.dropzone,
+                      pressed && styles.dropzonePressed,
+                    ]}
+                  >
+                    <View style={styles.dropzoneRing}>
+                      <Ionicons name="camera-outline" size={30} color={colors.onAccent} />
+                    </View>
+                    <Text style={styles.dropzoneTitle}>Take a photo</Text>
+                    <Text style={styles.dropzoneSub}>
+                      Frame the full outfit for the best matches
+                    </Text>
+                  </Pressable>
+                )}
+
+                <Button
+                  label="Choose from photos"
+                  icon="images-outline"
+                  variant="secondary"
+                  onPress={pickPhoto}
+                  disabled={state === "searching"}
+                />
+              </>
+            )}
+
+            {!textActive && state === "idle" ? (
               <>
                 <View style={styles.steps}>
                   {["Snap", "Match", "Shop"].map((step, i) => (
@@ -209,16 +328,49 @@ export default function SearchScreen() {
               </>
             ) : null}
 
-            {state === "results" ? (
+            {textActive ? (
+              textLoading ? null : (
+                <Text style={styles.resultsMeta}>
+                  {cards.length} {cards.length === 1 ? "item" : "items"} for
+                  {` "${query.trim()}"`}
+                </Text>
+              )
+            ) : state === "results" ? (
               <Text style={styles.resultsMeta}>
-                {results.length} {results.length === 1 ? "match" : "matches"} in{" "}
+                {cards.length} {cards.length === 1 ? "match" : "matches"} in{" "}
                 {(elapsedMs / 1000).toFixed(1)}s
               </Text>
             ) : null}
+
+            <ResultFilters
+              cards={source}
+              value={filters}
+              onChange={setFilters}
+              hasMatchScores={!textActive}
+            />
           </View>
         }
         ListEmptyComponent={
-          state === "searching" ? (
+          textActive ? (
+            textLoading ? (
+              <LoadingState label="Searching the catalog" />
+            ) : textError ? (
+              <MessageState
+                icon="cloud-offline-outline"
+                tone="error"
+                align="top"
+                title="Search failed"
+                subtitle={textError}
+              />
+            ) : (
+              <MessageState
+                icon="shirt-outline"
+                align="top"
+                title="Nothing matched"
+                subtitle={`No item mentions "${query.trim()}" yet. Try a photo instead.`}
+              />
+            )
+          ) : state === "searching" ? (
             <LoadingState label="Matching your outfit" />
           ) : state === "error" ? (
             <MessageState
@@ -261,6 +413,8 @@ const makeStyles = (c: Palette) => ({
   listContent: { paddingHorizontal: spacing.lg, gap: spacing.md },
   column: { gap: spacing.md },
 
+  field: { marginBottom: spacing.md },
+
   // The heavy block makes the app's core action the anchor of the screen.
   dropzone: {
     alignItems: "center" as const,
@@ -289,7 +443,7 @@ const makeStyles = (c: Palette) => ({
   /**
    * The frame owns the size and the clipping, and the photo fills it.
    *
-   * The previous version put `aspectRatio` and `maxHeight` on the image itself.
+   * An earlier version put `aspectRatio` and `maxHeight` on the image itself.
    * Yoga resolves aspectRatio against the clamped height, so the photo came out
    * 225pt wide inside a full-width row: the picture sat left of the page and
    * the clear button, anchored to the row rather than to the photo, floated off
@@ -325,8 +479,7 @@ const makeStyles = (c: Palette) => ({
   resultsMeta: {
     ...typography.label,
     color: c.faint,
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
   },
   steps: {
     flexDirection: "row" as const,

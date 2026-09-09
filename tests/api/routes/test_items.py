@@ -56,6 +56,7 @@ def items_client() -> TestClient:
     app = FastAPI()
     app.include_router(stores.router, prefix="/api/v1")
     app.state.products = PRODUCTS
+    app.state.products_lookup = {p["id"]: p for p in PRODUCTS}
     app.state.stores_lookup = {"s1": {"id": "s1"}, "s2": {"id": "s2"}}
     return TestClient(app)
 
@@ -108,3 +109,37 @@ def test_no_match_is_an_empty_list_not_an_error(items_client: TestClient):
     res = items_client.get("/api/v1/items", params={"search": "snowboard"})
     assert res.status_code == 200
     assert res.json() == []
+
+
+# ---------------------------------------------------------------------------
+# GET /items/{item_id}
+# ---------------------------------------------------------------------------
+
+
+def test_get_one_item(items_client: TestClient):
+    res = items_client.get("/api/v1/items/p2")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["id"] == "p2"
+    assert body["name"] == "Wide Leg Denim"
+    assert body["sizes"] == ["30", "32"]
+
+
+def test_get_one_item_falls_back_to_scanning_products(items_client: TestClient):
+    """products_lookup is built at startup and may be absent in some contexts."""
+    items_client.app.state.products_lookup = None
+    res = items_client.get("/api/v1/items/p3")
+    assert res.status_code == 200
+    assert res.json()["id"] == "p3"
+
+
+def test_unknown_item_is_404(items_client: TestClient):
+    res = items_client.get("/api/v1/items/nope")
+    assert res.status_code == 404
+
+
+def test_collection_route_still_wins_over_the_detail_route(items_client: TestClient):
+    """`/items` must list, not fall into `/items/{item_id}` with an empty id."""
+    res = items_client.get("/api/v1/items")
+    assert res.status_code == 200
+    assert isinstance(res.json(), list)

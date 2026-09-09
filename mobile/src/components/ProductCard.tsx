@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from "react";
-import { Linking, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -71,16 +71,33 @@ export function ProductCard({ item }: { item: ProductCardData }) {
     }
   };
 
+  /**
+   * Opens the in-app detail screen rather than the brand's website.
+   *
+   * The fields travel as params so the detail screen can paint immediately and
+   * then replace them with the fetched record. Only the small ones go: an image
+   * URL is fine, a description is not, and anything absent is simply omitted so
+   * the query string stays short.
+   */
   const openProduct = () => {
-    if (item.productUrl) Linking.openURL(item.productUrl).catch(() => {});
+    router.push({
+      pathname: "/item/[itemId]",
+      params: {
+        itemId: item.id,
+        ...(item.title ? { title: item.title } : {}),
+        ...(item.brand ? { brand: item.brand } : {}),
+        ...(typeof item.priceEgp === "number" ? { price: String(item.priceEgp) } : {}),
+        ...(item.imageUrl ? { image: item.imageUrl } : {}),
+        ...(item.productUrl ? { productUrl: item.productUrl } : {}),
+      },
+    });
   };
 
   return (
     <View style={styles.card}>
       <Pressable
         onPress={openProduct}
-        disabled={!item.productUrl}
-        accessibilityRole={item.productUrl ? "link" : "image"}
+        accessibilityRole="button"
         accessibilityLabel={`${item.title ?? "Fashion item"}${
           item.brand ? ` by ${item.brand}` : ""
         }, ${priceLabel}`}
