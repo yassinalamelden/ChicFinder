@@ -24,6 +24,11 @@ import type { Store, StoreItem } from "../../src/types/api";
 
 const ALL = "All";
 
+/** Category values arrive lowercase from the catalog; chips read better cased. */
+function titleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 export default function StoreDetailScreen() {
   const { storeId } = useLocalSearchParams<{ storeId: string }>();
   const navigation = useNavigation();
@@ -81,7 +86,7 @@ export default function StoreDetailScreen() {
         tone="error"
         title="Could not load this store"
         subtitle={error ?? undefined}
-        action={<Button label="Retry" onPress={load} />}
+        action={<Button label="Retry" onPress={load} arrow />}
       />
     );
   }
@@ -102,15 +107,17 @@ export default function StoreDetailScreen() {
               {store.logo_url ? (
                 <Image source={{ uri: store.logo_url }} style={styles.logo} contentFit="cover" />
               ) : (
-                <Ionicons name="storefront-outline" size={26} color={colors.muted} />
+                <Ionicons name="storefront-outline" size={28} color={colors.olive} />
               )}
             </View>
             <View style={styles.brandBody}>
               <Text style={styles.name}>{store.name}</Text>
               {store.location ? (
                 <View style={styles.locationRow}>
-                  <Ionicons name="location-outline" size={12} color={colors.muted} />
-                  <Text style={styles.location}>{store.location}</Text>
+                  <Ionicons name="location-outline" size={12} color={colors.faint} />
+                  <Text style={styles.location} numberOfLines={1}>
+                    {store.location}
+                  </Text>
                 </View>
               ) : null}
             </View>
@@ -123,8 +130,8 @@ export default function StoreDetailScreen() {
           {store.website_url ? (
             <Button
               label="Visit website"
-              icon="open-outline"
               variant="secondary"
+              arrow
               onPress={() => Linking.openURL(store.website_url!).catch(() => {})}
             />
           ) : null}
@@ -146,7 +153,7 @@ export default function StoreDetailScreen() {
                     style={[styles.chip, active && styles.chipActive]}
                   >
                     <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {cat}
+                      {cat === ALL ? ALL : titleCase(cat)}
                     </Text>
                   </Pressable>
                 );
@@ -172,39 +179,43 @@ export default function StoreDetailScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl, gap: spacing.md },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
+  },
   column: { gap: spacing.md },
 
   header: { gap: spacing.md, paddingBottom: spacing.sm },
   brandRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   logoWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
+    width: 68,
+    height: 68,
+    borderRadius: radius.lg,
+    backgroundColor: colors.accentSoft,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   logo: { width: "100%", height: "100%" },
-  brandBody: { flex: 1, gap: 2 },
+  brandBody: { flex: 1 },
   name: { ...typography.title, color: colors.text },
-  locationRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  location: { ...typography.caption, color: colors.muted },
-  description: { ...typography.body, color: colors.muted, lineHeight: 21 },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 },
+  location: { ...typography.label, color: colors.faint, flex: 1 },
+  description: { ...typography.body, color: colors.muted },
 
   chips: { gap: spacing.sm, paddingVertical: 2 },
   chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: 9,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.card,
+    backgroundColor: "transparent",
   },
   chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText: { ...typography.caption, color: colors.muted, fontWeight: "600" },
-  chipTextActive: { color: "#0d0d0d" },
+  chipText: { ...typography.caption, fontFamily: typography.bodyMedium.fontFamily, color: colors.muted },
+  chipTextActive: { color: colors.olive },
 
-  count: { ...typography.caption, color: colors.muted },
+  count: { ...typography.label, color: colors.faint },
 });

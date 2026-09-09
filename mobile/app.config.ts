@@ -18,9 +18,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
-  userInterfaceStyle: "dark",
-  backgroundColor: "#0d0d0d",
-  primaryColor: "#e8ff47",
+  userInterfaceStyle: "light",
+  backgroundColor: "#edeae2",
+  primaryColor: "#dcff00",
   assetBundlePatterns: ["**/*"],
 
   // The splash screen is configured through the expo-splash-screen plugin below;
@@ -50,7 +50,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: BUNDLE_ID,
     adaptiveIcon: {
       foregroundImage: "./assets/android-icon-foreground.png",
-      backgroundColor: "#0d0d0d",
+      backgroundColor: "#1e2300",
     },
     permissions: ["android.permission.CAMERA"],
   },
@@ -79,7 +79,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         image: "./assets/splash-icon.png",
         resizeMode: "contain",
-        backgroundColor: "#0d0d0d",
+        backgroundColor: "#edeae2",
       },
     ],
   ],

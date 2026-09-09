@@ -55,7 +55,7 @@ export default function SavedScreen() {
               await refresh();
               setRefreshing(false);
             }}
-            tintColor={colors.accent}
+            tintColor={colors.text}
           />
         }
         ListHeaderComponent={
@@ -75,7 +75,7 @@ export default function SavedScreen() {
               tone="error"
               title="Could not load your saved items"
               subtitle={error}
-              action={<Button label="Retry" onPress={refresh} />}
+              action={<Button label="Retry" onPress={refresh} arrow />}
             />
           ) : (
             <MessageState
@@ -85,6 +85,8 @@ export default function SavedScreen() {
               action={
                 <Button
                   label="Find something"
+                  variant="lime"
+                  arrow
                   onPress={() => router.push("/(tabs)/search")}
                 />
               }
@@ -98,6 +100,10 @@ export default function SavedScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl, gap: spacing.md },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
+  },
   column: { gap: spacing.md },
 });

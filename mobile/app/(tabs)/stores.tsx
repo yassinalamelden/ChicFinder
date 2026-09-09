@@ -48,7 +48,7 @@ export default function StoresScreen() {
         tone="error"
         title="Could not load stores"
         subtitle={error}
-        action={<Button label="Retry" onPress={load} />}
+        action={<Button label="Retry" onPress={load} arrow />}
       />
     );
   }
@@ -58,10 +58,7 @@ export default function StoresScreen() {
       style={styles.root}
       data={stores}
       keyExtractor={(store) => store.id}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: insets.top + spacing.sm },
-      ]}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.sm }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -69,7 +66,7 @@ export default function StoresScreen() {
             setRefreshing(true);
             load();
           }}
-          tintColor={colors.accent}
+          tintColor={colors.text}
         />
       }
       ListHeaderComponent={
@@ -93,7 +90,7 @@ export default function StoresScreen() {
             {item.logo_url ? (
               <Image source={{ uri: item.logo_url }} style={styles.logo} contentFit="cover" />
             ) : (
-              <Ionicons name="storefront-outline" size={22} color={colors.muted} />
+              <Ionicons name="storefront-outline" size={22} color={colors.olive} />
             )}
           </View>
 
@@ -108,13 +105,15 @@ export default function StoresScreen() {
             ) : null}
             {item.location ? (
               <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={12} color={colors.muted} />
-                <Text style={styles.location}>{item.location}</Text>
+                <Ionicons name="location-outline" size={12} color={colors.faint} />
+                <Text style={styles.location} numberOfLines={1}>
+                  {item.location}
+                </Text>
               </View>
             ) : null}
           </View>
 
-          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          <Ionicons name="chevron-forward" size={17} color={colors.faint} />
         </Pressable>
       )}
     />
@@ -123,25 +122,29 @@ export default function StoresScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl, gap: spacing.sm },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.sm + 2,
+  },
 
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
+    padding: spacing.md + 2,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  rowPressed: { opacity: 0.7 },
+  rowPressed: { opacity: 0.72 },
 
   logoWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    backgroundColor: colors.accentSoft,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -149,8 +152,8 @@ const styles = StyleSheet.create({
   logo: { width: "100%", height: "100%" },
 
   rowBody: { flex: 1, gap: 2 },
-  name: { ...typography.heading, color: colors.text },
-  description: { ...typography.caption, color: colors.muted, lineHeight: 16 },
-  locationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
-  location: { ...typography.caption, color: colors.muted },
+  name: { ...typography.title, fontSize: 19, lineHeight: 21, color: colors.text },
+  description: { ...typography.caption, color: colors.muted, marginTop: 2 },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
+  location: { ...typography.label, color: colors.faint, flex: 1 },
 });

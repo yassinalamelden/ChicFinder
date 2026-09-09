@@ -3,7 +3,7 @@
  *
  * Apple checks two things here during review: that a signed-in user can delete
  * their account without leaving the app, and that the privacy policy is
- * reachable. Both live in this screen, and neither is buried.
+ * reachable. Both live on this screen, and neither is buried.
  */
 
 import React, { useState } from "react";
@@ -89,9 +89,7 @@ export default function ProfileScreen() {
           icon="mail-outline"
           label="Contact support"
           onPress={() =>
-            Linking.openURL(
-              `mailto:${extra.supportEmail}?subject=ChicFinder%20support`
-            )
+            Linking.openURL(`mailto:${extra.supportEmail}?subject=ChicFinder%20support`)
           }
         />
       </View>
@@ -137,57 +135,56 @@ function Row({
       accessibilityLabel={label}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
-      <Ionicons name={icon} size={20} color={colors.text} />
+      <Ionicons name={icon} size={19} color={colors.text} />
       <Text style={styles.rowLabel}>{label}</Text>
-      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+      <Ionicons name="chevron-forward" size={17} color={colors.faint} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.md, gap: spacing.lg },
+  content: { paddingHorizontal: spacing.lg, gap: spacing.xl - 8 },
 
   identity: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   avatar: {
-    width: 60,
-    height: 60,
+    width: 68,
+    height: 68,
     borderRadius: radius.pill,
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { fontSize: 26, fontWeight: "700", color: "#0d0d0d" },
-  identityBody: { flex: 1, gap: 2 },
-  name: { ...typography.heading, color: colors.text },
+  avatarText: { ...typography.title, fontSize: 30, color: colors.olive },
+  identityBody: { flex: 1, gap: 3 },
+  name: { ...typography.title, color: colors.text },
   email: { ...typography.caption, color: colors.muted },
 
   statsRow: { flexDirection: "row", gap: spacing.md },
+  // An olive block, so the one number on the screen carries some weight.
   stat: {
     flex: 1,
-    padding: spacing.md,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    padding: spacing.md + 4,
+    backgroundColor: colors.olive,
+    borderRadius: radius.lg,
   },
-  statValue: { ...typography.title, color: colors.accent },
-  statLabel: { ...typography.caption, color: colors.muted, marginTop: 2 },
+  statValue: { ...typography.display, fontSize: 40, lineHeight: 40, color: colors.accent },
+  statLabel: { ...typography.label, color: colors.onOliveMuted, marginTop: 6 },
 
-  group: { gap: spacing.sm },
+  group: { gap: spacing.sm + 2 },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    minHeight: 52,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
+    minHeight: 58,
+    paddingHorizontal: spacing.md + 4,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  rowPressed: { opacity: 0.7 },
+  rowPressed: { opacity: 0.72 },
   rowLabel: { ...typography.body, color: colors.text, flex: 1 },
 
-  version: { ...typography.caption, color: colors.muted, textAlign: "center" },
+  version: { ...typography.label, color: colors.faint, textAlign: "center" },
 });

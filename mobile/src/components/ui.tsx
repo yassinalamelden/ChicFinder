@@ -1,6 +1,9 @@
 /**
- * Small shared building blocks: buttons, screen chrome, empty and error states.
- * Everything here is theme-driven so the app stays visually consistent.
+ * Shared building blocks: buttons, screen chrome, empty and error states.
+ *
+ * The Button here is the brand's signature control: a full pill, optionally
+ * carrying a circular arrow badge on the trailing edge. Everything is driven
+ * from theme.ts so a palette change never needs a visit to this file.
  */
 
 import React, { type ReactNode } from "react";
@@ -22,32 +25,64 @@ import { colors, radius, spacing, typography } from "../theme";
 // Button
 // ---------------------------------------------------------------------------
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonVariant = "primary" | "lime" | "secondary" | "danger";
 
 interface ButtonProps {
   label: string;
   onPress: () => void;
   variant?: ButtonVariant;
   icon?: keyof typeof Ionicons.glyphMap;
+  /** Adds the circular arrow badge. Use it on forward-moving actions only. */
+  arrow?: boolean;
   loading?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
-  /** Accessibility hint for screen readers, when the label alone is not enough. */
   hint?: string;
 }
+
+const palette: Record<
+  ButtonVariant,
+  { bg: string; fg: string; border: string; badge: string }
+> = {
+  primary: {
+    bg: colors.olive,
+    fg: colors.onOlive,
+    border: colors.olive,
+    badge: "rgba(237, 234, 226, 0.18)",
+  },
+  lime: {
+    bg: colors.accent,
+    fg: colors.olive,
+    border: colors.accent,
+    badge: "rgba(30, 35, 0, 0.14)",
+  },
+  secondary: {
+    bg: "transparent",
+    fg: colors.text,
+    border: colors.border,
+    badge: "rgba(52, 49, 48, 0.10)",
+  },
+  danger: {
+    bg: "transparent",
+    fg: colors.danger,
+    border: colors.danger,
+    badge: "rgba(166, 61, 43, 0.12)",
+  },
+};
 
 export function Button({
   label,
   onPress,
   variant = "primary",
   icon,
+  arrow = false,
   loading = false,
   disabled = false,
   style,
   hint,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
-  const palette = buttonPalette[variant];
+  const tone = palette[variant];
 
   return (
     <Pressable
@@ -62,30 +97,29 @@ export function Button({
       }}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: palette.bg, borderColor: palette.border },
+        { backgroundColor: tone.bg, borderColor: tone.border },
+        arrow && styles.buttonWithArrow,
         pressed && !isDisabled && styles.buttonPressed,
         isDisabled && styles.buttonDisabled,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={palette.fg} />
+        <ActivityIndicator color={tone.fg} />
       ) : (
         <>
-          {icon ? <Ionicons name={icon} size={18} color={palette.fg} /> : null}
-          <Text style={[styles.buttonLabel, { color: palette.fg }]}>{label}</Text>
+          {icon ? <Ionicons name={icon} size={18} color={tone.fg} /> : null}
+          <Text style={[styles.buttonLabel, { color: tone.fg }]}>{label}</Text>
+          {arrow ? (
+            <View style={[styles.arrowBadge, { backgroundColor: tone.badge }]}>
+              <Ionicons name="arrow-forward" size={15} color={tone.fg} />
+            </View>
+          ) : null}
         </>
       )}
     </Pressable>
   );
 }
-
-const buttonPalette: Record<ButtonVariant, { bg: string; fg: string; border: string }> = {
-  primary: { bg: colors.accent, fg: "#0d0d0d", border: colors.accent },
-  secondary: { bg: colors.card, fg: colors.text, border: colors.border },
-  ghost: { bg: "transparent", fg: colors.text, border: colors.border },
-  danger: { bg: "transparent", fg: colors.danger, border: colors.danger },
-};
 
 // ---------------------------------------------------------------------------
 // Screen states
@@ -94,7 +128,7 @@ const buttonPalette: Record<ButtonVariant, { bg: string; fg: string; border: str
 export function LoadingState({ label = "Loading" }: { label?: string }) {
   return (
     <View style={styles.centered} accessibilityRole="progressbar">
-      <ActivityIndicator color={colors.accent} size="large" />
+      <ActivityIndicator color={colors.text} size="large" />
       <Text style={styles.stateSubtitle}>{label}</Text>
     </View>
   );
@@ -115,13 +149,21 @@ export function MessageState({
   action,
   tone = "neutral",
 }: MessageStateProps) {
+  const isError = tone === "error";
   return (
     <View style={styles.centered}>
-      <Ionicons
-        name={icon}
-        size={44}
-        color={tone === "error" ? colors.danger : colors.muted}
-      />
+      <View
+        style={[
+          styles.stateRing,
+          isError && { backgroundColor: "rgba(166, 61, 43, 0.12)" },
+        ]}
+      >
+        <Ionicons
+          name={icon}
+          size={34}
+          color={isError ? colors.danger : colors.olive}
+        />
+      </View>
       <Text style={styles.stateTitle}>{title}</Text>
       {subtitle ? <Text style={styles.stateSubtitle}>{subtitle}</Text> : null}
       {action ? <View style={styles.stateAction}>{action}</View> : null}
@@ -150,6 +192,11 @@ export function ScreenHeader({
   );
 }
 
+/** Small uppercase metadata label. */
+export function Label({ children }: { children: ReactNode }) {
+  return <Text style={styles.label}>{children}</Text>;
+}
+
 export function Divider() {
   return <View style={styles.divider} />;
 }
@@ -159,35 +206,67 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing.sm,
-    minHeight: 52, // Apple's 44pt minimum touch target, with room to breathe.
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
+    gap: spacing.sm + 2,
+    minHeight: 54,
+    paddingHorizontal: spacing.lg + 4,
+    borderRadius: radius.pill,
     borderWidth: 1,
   },
-  buttonPressed: { opacity: 0.8 },
-  buttonDisabled: { opacity: 0.45 },
-  buttonLabel: { ...typography.label, fontSize: 15 },
+  // The badge is inset from the trailing edge, so that side needs less padding.
+  buttonWithArrow: { paddingRight: spacing.sm + 2 },
+  buttonPressed: { opacity: 0.78 },
+  buttonDisabled: { opacity: 0.4 },
+  buttonLabel: typography.button,
+  arrowBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   centered: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.xl,
-    gap: spacing.sm,
+    gap: spacing.sm + 2,
   },
-  stateTitle: { ...typography.heading, color: colors.text, marginTop: spacing.sm },
+  stateRing: {
+    width: 84,
+    height: 84,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accentSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+  },
+  stateTitle: { ...typography.title, color: colors.text },
   stateSubtitle: {
     ...typography.body,
     color: colors.muted,
     textAlign: "center",
-    maxWidth: 280,
+    maxWidth: 260,
   },
-  stateAction: { marginTop: spacing.md, minWidth: 200 },
+  stateAction: { marginTop: spacing.md, minWidth: 210 },
 
-  header: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.md },
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.lg,
+  },
   headerTitle: { ...typography.display, color: colors.text },
-  headerSubtitle: { ...typography.body, color: colors.muted, marginTop: spacing.xs },
+  headerSubtitle: {
+    ...typography.body,
+    color: colors.muted,
+    marginTop: spacing.sm,
+  },
 
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
+  label: { ...typography.label, color: colors.faint },
+
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.md,
+  },
 });

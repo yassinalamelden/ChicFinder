@@ -29,7 +29,7 @@ import type { ChicFinderResult } from "../../src/types/api";
 
 type State = "idle" | "searching" | "results" | "error";
 
-/** Long edge cap and compression, so a 12MP photo does not stall the upload. */
+/** Compression, so a 12MP photo does not stall the upload on mobile data. */
 const IMAGE_QUALITY = 0.8;
 
 export default function SearchScreen() {
@@ -134,7 +134,7 @@ export default function SearchScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Clear photo and start over"
                 >
-                  <Ionicons name="close" size={18} color={colors.text} />
+                  <Ionicons name="close" size={17} color={colors.text} />
                 </Pressable>
               </View>
             ) : (
@@ -144,7 +144,9 @@ export default function SearchScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Take a photo of an outfit"
               >
-                <Ionicons name="camera-outline" size={40} color={colors.accent} />
+                <View style={styles.dropzoneRing}>
+                  <Ionicons name="camera-outline" size={28} color={colors.olive} />
+                </View>
                 <Text style={styles.dropzoneTitle}>Take a photo</Text>
                 <Text style={styles.dropzoneSub}>
                   Frame the full outfit for the best matches
@@ -189,11 +191,11 @@ export default function SearchScreen() {
               subtitle={error ?? undefined}
               action={
                 <View style={styles.errorActions}>
-                  <Button label="Try again" onPress={takePhoto} />
+                  <Button label="Try again" onPress={takePhoto} arrow />
                   {error?.includes("Settings") ? (
                     <Button
                       label="Open Settings"
-                      variant="ghost"
+                      variant="secondary"
                       onPress={() =>
                         Platform.OS === "ios"
                           ? Linking.openURL("app-settings:")
@@ -219,52 +221,64 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl, gap: spacing.md },
+  listContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
+  },
   column: { gap: spacing.md },
 
+  // The olive block makes the app's core action the heaviest thing on screen,
+  // and echoes the dark contrast sections on the marketing site.
   dropzone: {
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing.xs,
+    gap: spacing.xs + 2,
     paddingVertical: spacing.xxl,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    backgroundColor: colors.olive,
     marginBottom: spacing.md,
   },
-  dropzoneTitle: { ...typography.heading, color: colors.text, marginTop: spacing.sm },
-  dropzoneSub: { ...typography.caption, color: colors.muted },
+  dropzoneRing: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xs + 2,
+  },
+  dropzoneTitle: { ...typography.title, fontSize: 24, color: colors.onOlive },
+  dropzoneSub: { ...typography.caption, color: colors.onOliveMuted },
 
   preview: { position: "relative", marginBottom: spacing.md },
   previewImage: {
     width: "100%",
     aspectRatio: 3 / 4,
-    maxHeight: 320,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
+    maxHeight: 300,
+    borderRadius: radius.xl,
+    backgroundColor: "#c9c0b2",
   },
   previewClear: {
     position: "absolute",
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 32,
-    height: 32,
+    top: 12,
+    right: 12,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radius.pill,
-    backgroundColor: colors.overlay,
+    backgroundColor: "rgba(242, 239, 230, 0.92)",
   },
 
-  buttonRow: { flexDirection: "row", gap: spacing.md },
+  buttonRow: { flexDirection: "row", gap: spacing.sm + 2 },
   flexButton: { flex: 1 },
 
   resultsMeta: {
-    ...typography.caption,
-    color: colors.muted,
-    marginTop: spacing.lg,
+    ...typography.label,
+    color: colors.faint,
+    marginTop: spacing.xl,
     marginBottom: spacing.sm,
   },
-  errorActions: { gap: spacing.sm, width: "100%" },
+  errorActions: { gap: spacing.sm + 2, width: "100%" },
 });

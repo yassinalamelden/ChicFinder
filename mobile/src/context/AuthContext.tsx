@@ -39,7 +39,7 @@ import {
   type User,
 } from "firebase/auth";
 
-import { auth, isFirebaseConfigured } from "../lib/firebase";
+import { auth, isFirebaseConfigured, requireAuth } from "../lib/firebase";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setInitialising(false);
       return;
     }
-    return onAuthStateChanged(auth, (next) => {
+    return onAuthStateChanged(requireAuth(), (next) => {
       setUser(next);
       setInitialising(false);
     });
@@ -116,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (googleResponse?.type !== "success") return;
     const idToken = googleResponse.params?.id_token;
     if (!idToken) return;
-    signInWithCredential(auth, GoogleAuthProvider.credential(idToken)).catch((err) => {
+    signInWithCredential(requireAuth(), GoogleAuthProvider.credential(idToken)).catch((err) => {
       console.warn("Google sign-in failed", err);
     });
   }, [googleResponse]);
@@ -145,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const provider = new OAuthProvider("apple.com");
       const result = await signInWithCredential(
-        auth,
+        requireAuth(),
         provider.credential({
           idToken: credential.identityToken,
           rawNonce,
@@ -179,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      await signInWithEmailAndPassword(requireAuth(), email.trim(), password);
     } catch (err) {
       throw new AuthError(humanise(err));
     }
@@ -187,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerWithEmail = useCallback(async (email: string, password: string) => {
     try {
-      await createUserWithEmailAndPassword(auth, email.trim(), password);
+      await createUserWithEmailAndPassword(requireAuth(), email.trim(), password);
     } catch (err) {
       throw new AuthError(humanise(err));
     }
@@ -195,14 +195,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = useCallback(async (email: string) => {
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      await sendPasswordResetEmail(requireAuth(), email.trim());
     } catch (err) {
       throw new AuthError(humanise(err));
     }
   }, []);
 
   const signOut = useCallback(async () => {
-    await firebaseSignOut(auth);
+    await firebaseSignOut(requireAuth());
   }, []);
 
   const value = useMemo<AuthContextValue>(

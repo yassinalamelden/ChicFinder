@@ -1,8 +1,9 @@
 /**
  * Product card used by search results, store catalogs and the saved list.
  *
- * The three screens hand it slightly different shapes, so it takes a small
- * normalised prop set rather than any one API type.
+ * Hierarchy, deliberately: the image carries the card, then the price, then the
+ * name, then the brand as a small uppercase label. The earlier version gave all
+ * three text lines near-equal weight and nothing led.
  */
 
 import React, { useState } from "react";
@@ -78,7 +79,7 @@ export function ProductCard({ item }: { item: ProductCardData }) {
           />
         ) : (
           <View style={[styles.image, styles.imageFallback]}>
-            <Ionicons name="shirt-outline" size={32} color={colors.muted} />
+            <Ionicons name="shirt-outline" size={30} color={colors.faint} />
           </View>
         )}
 
@@ -103,12 +104,12 @@ export function ProductCard({ item }: { item: ProductCardData }) {
           accessibilityRole="button"
           accessibilityLabel={saved ? "Remove from saved" : "Save item"}
           accessibilityState={{ selected: saved }}
-          style={styles.saveButton}
+          style={[styles.saveButton, saved && styles.saveButtonActive]}
         >
           <Ionicons
             name={saved ? "heart" : "heart-outline"}
-            size={20}
-            color={saved ? colors.accent2 : colors.text}
+            size={18}
+            color={colors.olive}
           />
         </Pressable>
       </Pressable>
@@ -116,7 +117,7 @@ export function ProductCard({ item }: { item: ProductCardData }) {
       <View style={styles.body}>
         {item.brand ? (
           <Text style={styles.brand} numberOfLines={1}>
-            {item.brand.toUpperCase()}
+            {item.brand}
           </Text>
         ) : null}
         <Text style={styles.title} numberOfLines={2}>
@@ -134,53 +135,63 @@ export function ProductCard({ item }: { item: ProductCardData }) {
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: "hidden",
   },
-  imageWrap: { position: "relative", aspectRatio: 3 / 4, backgroundColor: colors.surface },
+  imageWrap: {
+    position: "relative",
+    aspectRatio: 3 / 4,
+    backgroundColor: "#c9c0b2",
+  },
   image: { width: "100%", height: "100%" },
   imageFallback: { alignItems: "center", justifyContent: "center" },
 
   matchBadge: {
     position: "absolute",
-    top: spacing.sm,
-    left: spacing.sm,
+    top: 10,
+    left: 10,
     backgroundColor: colors.accent,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: radius.pill,
   },
-  matchText: { ...typography.caption, fontWeight: "700", color: "#0d0d0d" },
+  matchText: { ...typography.label, letterSpacing: 0.3, color: colors.olive },
 
   unavailableBadge: {
     position: "absolute",
-    bottom: spacing.sm,
-    left: spacing.sm,
-    backgroundColor: colors.unavailable,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
+    bottom: 10,
+    left: 10,
+    backgroundColor: colors.danger,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
   },
-  unavailableText: { ...typography.caption, fontWeight: "700", color: colors.text },
+  unavailableText: { ...typography.label, color: colors.onOlive },
 
   saveButton: {
     position: "absolute",
-    top: spacing.sm,
-    right: spacing.sm,
+    top: 10,
+    right: 10,
     width: 34,
     height: 34,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radius.pill,
-    backgroundColor: colors.overlay,
+    backgroundColor: "rgba(242, 239, 230, 0.92)",
   },
+  saveButtonActive: { backgroundColor: colors.accent },
 
-  body: { padding: spacing.sm, gap: 2 },
-  brand: { ...typography.caption, color: colors.muted, letterSpacing: 0.6 },
-  title: { ...typography.body, color: colors.text, fontWeight: "500" },
-  price: { ...typography.body, color: colors.accent, fontWeight: "700", marginTop: 2 },
+  body: { padding: spacing.md - 2, gap: 3 },
+  brand: { ...typography.label, color: colors.faint },
+  title: { ...typography.body, fontSize: 14, lineHeight: 19, color: colors.text },
+  price: {
+    ...typography.bodyMedium,
+    fontFamily: typography.button.fontFamily,
+    color: colors.text,
+    marginTop: 4,
+  },
   saveError: { ...typography.caption, color: colors.danger, marginTop: 2 },
 });

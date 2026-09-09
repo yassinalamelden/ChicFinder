@@ -40,7 +40,7 @@ export class ApiError extends Error {
 }
 
 async function getToken(): Promise<string> {
-  const user = auth.currentUser;
+  const user = auth?.currentUser;
   if (!user) throw new ApiError("You need to be signed in to do that.", 401);
   return user.getIdToken();
 }

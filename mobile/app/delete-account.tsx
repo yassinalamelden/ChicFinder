@@ -3,17 +3,14 @@
  *
  * The flow is deliberately explicit: the screen states exactly what is deleted,
  * requires the user to type DELETE, and reports the real outcome from the
- * server rather than optimistically claiming success. Recent-login errors are
- * handled by asking the user to sign in again, because Firebase refuses to
- * delete an account on a stale session.
+ * server rather than optimistically claiming success.
  */
 
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
-import { Linking } from "react-native";
 
 import { Button } from "../src/components/ui";
 import { useAuth } from "../src/context/AuthContext";
@@ -44,8 +41,8 @@ export default function DeleteAccountScreen() {
     try {
       const result = await deleteAccount();
 
-      // The backend removes the Firebase user, so the local session is now
-      // pointing at an account that no longer exists. Clear it.
+      // The backend removes the Firebase user, so the local session now points
+      // at an account that no longer exists. Clear it.
       await signOut().catch(() => {});
 
       Alert.alert("Account deleted", result.message, [
@@ -72,7 +69,7 @@ export default function DeleteAccountScreen() {
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <View style={styles.warningBadge}>
-        <Ionicons name="warning-outline" size={22} color={colors.danger} />
+        <Ionicons name="warning-outline" size={24} color={colors.danger} />
       </View>
 
       <Text style={styles.title}>This is permanent</Text>
@@ -108,7 +105,7 @@ export default function DeleteAccountScreen() {
           autoCapitalize="characters"
           autoCorrect={false}
           placeholder={CONFIRM_WORD}
-          placeholderTextColor={colors.muted}
+          placeholderTextColor={colors.faint}
           accessibilityLabel={`Type ${CONFIRM_WORD} to confirm account deletion`}
         />
       </View>
@@ -149,44 +146,44 @@ export default function DeleteAccountScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, gap: spacing.md },
+  content: { padding: spacing.lg + 4, gap: spacing.md + 2 },
 
   warningBadge: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,90,90,0.12)",
+    backgroundColor: "rgba(166, 61, 43, 0.12)",
   },
   title: { ...typography.title, color: colors.text },
-  body: { ...typography.body, color: colors.muted, lineHeight: 22 },
+  body: { ...typography.body, color: colors.muted },
 
   list: {
-    gap: spacing.sm,
-    padding: spacing.md,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
+    gap: spacing.sm + 2,
+    padding: spacing.md + 4,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  listHeading: { ...typography.label, color: colors.text },
-  listRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  listText: { ...typography.body, color: colors.muted, flex: 1 },
+  listHeading: { ...typography.label, color: colors.faint },
+  listRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm + 2 },
+  listText: { ...typography.body, fontSize: 14, color: colors.text, flex: 1 },
 
   account: { ...typography.caption, color: colors.muted },
-  accountEmail: { color: colors.text, fontWeight: "600" },
+  accountEmail: { color: colors.text, fontFamily: typography.button.fontFamily },
 
-  confirmBlock: { gap: spacing.sm, marginTop: spacing.sm },
+  confirmBlock: { gap: spacing.sm + 2, marginTop: spacing.xs },
   label: { ...typography.caption, color: colors.muted },
-  confirmWord: { color: colors.danger, fontWeight: "700" },
+  confirmWord: { color: colors.danger, fontFamily: typography.button.fontFamily },
   input: {
-    minHeight: 52,
-    backgroundColor: colors.card,
+    minHeight: 54,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg + 2,
     color: colors.text,
     letterSpacing: 2,
     ...typography.body,
@@ -194,7 +191,7 @@ const styles = StyleSheet.create({
 
   errorBlock: { gap: spacing.xs },
   errorText: { ...typography.caption, color: colors.danger },
-  errorHelp: { ...typography.caption, color: colors.accent },
+  errorHelp: { ...typography.caption, color: colors.text, textDecorationLine: "underline" },
 
-  actions: { gap: spacing.sm, marginTop: spacing.md },
+  actions: { gap: spacing.sm + 2, marginTop: spacing.md },
 });

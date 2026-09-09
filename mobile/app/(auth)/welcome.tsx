@@ -23,6 +23,7 @@ import Constants from "expo-constants";
 
 import { Button } from "../../src/components/ui";
 import { useAuth, AuthError } from "../../src/context/AuthContext";
+import { isFirebaseConfigured, missingFirebaseKeys } from "../../src/lib/firebase";
 import { colors, radius, spacing, typography } from "../../src/theme";
 
 type Mode = "signIn" | "register";
@@ -92,15 +93,15 @@ export default function WelcomeScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xl },
+          { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.lg },
         ]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.hero}>
-          <Text style={styles.wordmark}>ChicFinder</Text>
+          <Text style={styles.wordmark}>Chic Finder</Text>
           <Text style={styles.headline}>
-            Snap an outfit.{"\n"}
-            <Text style={styles.headlineMuted}>Find it in Egypt.</Text>
+            Snap an{"\n"}outfit.{"\n"}
+            <Text style={styles.headlineMuted}>Find it{"\n"}in Egypt.</Text>
           </Text>
           <Text style={styles.sub}>
             Photograph any look and ChicFinder matches it against real products
@@ -108,12 +109,22 @@ export default function WelcomeScreen() {
           </Text>
         </View>
 
+        {!isFirebaseConfigured ? (
+          <View style={styles.configWarning}>
+            <Text style={styles.configTitle}>Sign-in is not configured</Text>
+            <Text style={styles.configBody}>
+              Add real values to mobile/.env from your Firebase console, then
+              restart Expo. Missing: {missingFirebaseKeys.join(", ")}
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.actions}>
           {isAppleAvailable ? (
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-              cornerRadius={radius.md}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={radius.pill}
               style={styles.appleButton}
               onPress={() => run("apple", signInWithApple)}
             />
@@ -137,7 +148,7 @@ export default function WelcomeScreen() {
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={colors.faint}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -149,7 +160,7 @@ export default function WelcomeScreen() {
           <TextInput
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={colors.faint}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -161,6 +172,8 @@ export default function WelcomeScreen() {
 
           <Button
             label={mode === "signIn" ? "Sign in" : "Create account"}
+            variant="lime"
+            arrow
             loading={busy === "email"}
             disabled={busy !== null}
             onPress={submitEmail}
@@ -215,43 +228,73 @@ export default function WelcomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.lg, gap: spacing.xl, flexGrow: 1 },
-
-  hero: { gap: spacing.sm },
-  wordmark: {
-    ...typography.label,
-    color: colors.accent,
-    letterSpacing: 2,
-    textTransform: "uppercase",
+  content: {
+    paddingHorizontal: spacing.lg + 4,
+    gap: spacing.xl,
+    flexGrow: 1,
   },
-  headline: { ...typography.display, color: colors.text, lineHeight: 40 },
-  headlineMuted: { color: colors.muted },
-  sub: { ...typography.body, color: colors.muted, lineHeight: 22, marginTop: spacing.xs },
 
-  actions: { gap: spacing.md },
-  appleButton: { height: 52, width: "100%" },
+  hero: { gap: spacing.md },
+  wordmark: {
+    ...typography.title,
+    fontSize: 15,
+    lineHeight: 18,
+    letterSpacing: 1.5,
+    color: colors.text,
+  },
+  headline: { ...typography.displayLarge, color: colors.text },
+  headlineMuted: { color: colors.faint },
+  sub: { ...typography.body, color: colors.muted, maxWidth: 300 },
+
+  configWarning: {
+    gap: spacing.xs,
+    padding: spacing.md + 2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    backgroundColor: "rgba(166, 61, 43, 0.10)",
+  },
+  configTitle: {
+    ...typography.heading,
+    fontSize: 15,
+    color: colors.danger,
+  },
+  configBody: { ...typography.caption, color: colors.text },
+
+  actions: { gap: spacing.sm + 4 },
+  appleButton: { height: 54, width: "100%" },
 
   separator: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   line: { flex: 1, height: 1, backgroundColor: colors.border },
-  separatorText: { ...typography.caption, color: colors.muted },
+  separatorText: { ...typography.label, color: colors.faint },
 
   input: {
-    minHeight: 52,
-    backgroundColor: colors.card,
+    minHeight: 54,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg + 2,
     color: colors.text,
     ...typography.body,
   },
 
   switchRow: { flexDirection: "row", justifyContent: "space-between" },
-  link: { ...typography.caption, color: colors.accent },
+  link: {
+    ...typography.caption,
+    fontFamily: typography.bodyMedium.fontFamily,
+    color: colors.text,
+    textDecorationLine: "underline",
+  },
 
   error: { ...typography.caption, color: colors.danger, textAlign: "center" },
-  notice: { ...typography.caption, color: colors.accent, textAlign: "center" },
+  notice: { ...typography.caption, color: colors.text, textAlign: "center" },
 
   legal: { marginTop: "auto", paddingTop: spacing.lg },
-  legalText: { ...typography.caption, color: colors.muted, textAlign: "center" },
+  legalText: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.faint,
+    textAlign: "center",
+  },
 });

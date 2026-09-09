@@ -1,6 +1,6 @@
 /**
- * Root layout: providers, theme chrome, and the gate that decides whether a
- * cold start lands on the welcome screen or the tabs.
+ * Root layout: fonts, providers, theme chrome, and the gate that decides
+ * whether a cold start lands on the welcome screen or the tabs.
  */
 
 import React, { useEffect } from "react";
@@ -10,20 +10,29 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as SplashScreen from "expo-splash-screen";
+import { useFonts } from "expo-font";
+import { Anton_400Regular } from "@expo-google-fonts/anton";
+import {
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+} from "@expo-google-fonts/geist";
 
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { SavedProvider } from "../src/context/SavedContext";
-import { colors } from "../src/theme";
+import { colors, typography } from "../src/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-function RootNavigator() {
+function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
   const { user, initialising } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
+  const ready = fontsReady && !initialising;
+
   useEffect(() => {
-    if (initialising) return;
+    if (!ready) return;
 
     SplashScreen.hideAsync().catch(() => {});
 
@@ -34,19 +43,18 @@ function RootNavigator() {
     } else if (user && inAuthGroup) {
       router.replace("/(tabs)/search");
     }
-  }, [user, initialising, segments, router]);
+  }, [user, ready, segments, router]);
 
-  if (initialising) {
-    // The native splash is still up at this point; this just avoids a flash.
-    return <View style={styles.splash} />;
-  }
+  // Holding the splash until the fonts resolve avoids a frame of system-font
+  // text, which is jarring when every heading is meant to be Anton.
+  if (!ready) return <View style={styles.splash} />;
 
   return (
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: "600" },
+        headerTitleStyle: typography.heading,
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.bg },
       }}
@@ -66,13 +74,24 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [fontsReady, fontError] = useFonts({
+    Anton_400Regular,
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_600SemiBold,
+  });
+
+  // A font that fails to download should degrade to the system face, not trap
+  // the user behind a splash screen forever.
+  const canRender = fontsReady || Boolean(fontError);
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <AuthProvider>
           <SavedProvider>
-            <StatusBar style="light" />
-            <RootNavigator />
+            <StatusBar style="dark" />
+            <RootNavigator fontsReady={canRender} />
           </SavedProvider>
         </AuthProvider>
       </SafeAreaProvider>

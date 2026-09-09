@@ -25,8 +25,10 @@ from PIL import Image, ImageDraw
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 
-BG = (13, 13, 13, 255)        # colors.bg
-ACCENT = (232, 255, 71, 255)  # colors.accent
+BG = (30, 35, 0, 255)         # colors.olive, the brand dark block
+ACCENT = (220, 255, 0, 255)   # colors.accent
+OLIVE = (30, 35, 0, 255)      # colors.olive, for marks drawn on the bone splash
+BONE = (237, 234, 226, 255)   # colors.bg
 SIZE = 1024
 
 # Supersampling factor. Drawing large and downscaling gives clean curves without
@@ -151,9 +153,10 @@ def main() -> None:
     _save(img, "adaptive-icon.png")
     _save(img, "android-icon-foreground.png")
 
-    # Splash mark: transparent, drawn against the config's background colour.
+    # Splash mark: transparent, and drawn in OLIVE because the splash background
+    # is bone. A lime mark there would be invisible.
     img, draw = _canvas(transparent=True)
-    _draw_mark(draw, scale=0.50)
+    _draw_mark(draw, scale=0.50, color=OLIVE)
     _save(img, "splash-icon.png")
 
     print("Done.")
