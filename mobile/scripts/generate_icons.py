@@ -19,7 +19,6 @@ search, the hanger is what you are searching for.
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -83,11 +82,12 @@ def _draw_mark(draw: ImageDraw.ImageDraw, scale: float, color=BONE) -> None:
     # own bounding box is centred in the frame rather than the apex being
     # centred, which is what made the old mark sit low and read lopsided.
     hanger_width = span * 0.52
-    hook_r = span * 0.105
+    hook_r = span * 0.090
+    hook_tail = hook_r * 0.70    # how far the tip comes back down
 
     bar_y = span * 0.17          # the bottom bar
     apex_y = -span * 0.02        # where the two shoulders meet the stem
-    stem_top_y = -span * 0.095  # where the stem hands over to the hook
+    stem_top_y = -span * 0.105   # where the stem hands over to the hook
 
     top = stem_top_y - hook_r
     offset = centre - (top + bar_y) / 2   # centres the hanger's own extent
@@ -96,8 +96,12 @@ def _draw_mark(draw: ImageDraw.ImageDraw, scale: float, color=BONE) -> None:
     apex_y += offset
     stem_top_y += offset
 
-    w = int(stroke * 0.95)
-    cap = stroke * 0.95 / 2
+    # Lighter than the viewfinder brackets on purpose. It separates the two
+    # halves of the mark, and it keeps the inside of the hook open rather than
+    # filling in once the icon is drawn at 40pt.
+    hanger_stroke = stroke * 0.85
+    w = int(hanger_stroke)
+    cap = hanger_stroke / 2
 
     def dot(x: float, y: float) -> None:
         """Round cap, since PIL's line ends are square."""
@@ -124,23 +128,33 @@ def _draw_mark(draw: ImageDraw.ImageDraw, scale: float, color=BONE) -> None:
     # Stem: straight up from the apex to where the hook begins.
     draw.line([(centre, apex_y), (centre, stem_top_y)], fill=color, width=w)
 
-    # Hook. A half circle stopped dead at three o'clock, which the old version
-    # drew, reads as a stub rather than a hook. Carrying the arc past the right
-    # side and down to about four o'clock gives the tip the inward curl that
-    # makes the shape legible as a coat hanger at 40pt.
+    # Hook, built as a candy cane: the stem turns over the top through a half
+    # circle, then runs straight back down for a short tail.
+    #
+    # Two earlier attempts got this wrong in opposite directions. Stopping the
+    # arc at three o'clock leaves a stub with no hook in it. Continuing the arc
+    # round past the bottom instead puts a closed ring beside the stem, which
+    # reads as a loop rather than something you would hang on a rail. The turn
+    # plus a straight tail is what makes the shape a hook, and it is also how a
+    # wire hanger is actually bent.
     hook_cx = centre + hook_r
-    box = [
-        hook_cx - hook_r,
-        stem_top_y - hook_r,
-        hook_cx + hook_r,
-        stem_top_y + hook_r,
-    ]
-    draw.arc(box, start=178, end=382, fill=color, width=w)
-    dot(centre, stem_top_y)
+    draw.arc(
+        [
+            hook_cx - hook_r,
+            stem_top_y - hook_r,
+            hook_cx + hook_r,
+            stem_top_y + hook_r,
+        ],
+        start=180,
+        end=360,
+        fill=color,
+        width=w,
+    )
 
-    # Round the free tip, at the arc's end angle.
-    end_rad = math.radians(382)
-    dot(hook_cx + hook_r * math.cos(end_rad), stem_top_y + hook_r * math.sin(end_rad))
+    tip_x = centre + 2 * hook_r
+    draw.line([(tip_x, stem_top_y), (tip_x, stem_top_y + hook_tail)], fill=color, width=w)
+    dot(centre, stem_top_y)
+    dot(tip_x, stem_top_y + hook_tail)
 
 
 def _save(img: Image.Image, name: str, size: int = SIZE, drop_alpha: bool = False) -> None:
