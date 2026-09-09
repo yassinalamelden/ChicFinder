@@ -20,7 +20,6 @@ import * as Haptics from "expo-haptics";
 import { Button, ScreenHeader } from "../../src/components/ui";
 import { useAuth } from "../../src/context/AuthContext";
 import { useSaved } from "../../src/context/SavedContext";
-import { useOnboarding } from "../../src/context/OnboardingContext";
 import {
   TAB_BAR_HEIGHT,
   elevation,
@@ -45,7 +44,6 @@ const MODES: Array<{ value: ThemeMode; label: string; icon: keyof typeof Ionicon
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { reset: resetOnboarding } = useOnboarding();
   const colors = useTheme();
   const styles = useThemedStyles(makeStyles);
   const { mode, setMode } = useThemeMode();
@@ -162,10 +160,10 @@ export default function ProfileScreen() {
         <Row
           icon="information-circle-outline"
           label="How ChicFinder works"
-          onPress={async () => {
-            await resetOnboarding();
-            router.push("/onboarding");
-          }}
+          // Pushed, not reset. Clearing the flag to replay it would bring the
+          // walkthrough back on the next launch if the user backed out here,
+          // which is the one thing it must never do.
+          onPress={() => router.push("/onboarding")}
         />
         <Row
           icon="shield-checkmark-outline"

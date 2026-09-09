@@ -76,7 +76,12 @@ export default function OnboardingScreen() {
     // The flag must be true in memory before we navigate, or the root layout
     // still sees a first launch and sends us straight back here.
     await complete();
-    router.replace("/(tabs)/search");
+
+    // On a first launch the layout replaced the route with this one, so there
+    // is nothing behind it and the tabs are the destination. Opened from
+    // Profile there is, and the user expects to land back where they were.
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/search");
   };
 
   const next = () => {
