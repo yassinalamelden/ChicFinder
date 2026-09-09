@@ -89,10 +89,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAppleAvailable, setAppleAvailable] = useState(false);
 
   // Google sign-in via the system browser. The client IDs are public.
+  const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+  const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+  const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+
+  const hasGoogleConfig = Boolean(
+    googleIosClientId || googleAndroidClientId || googleWebClientId
+  );
+
   const [googleRequest, googleResponse, promptGoogle] = Google.useIdTokenAuthRequest({
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    iosClientId: googleIosClientId,
+    androidClientId: googleAndroidClientId,
+    webClientId: googleWebClientId,
   });
 
   useEffect(() => {
@@ -168,14 +176,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    if (!googleRequest) {
+    if (!hasGoogleConfig || !googleRequest) {
       throw new AuthError("Google sign-in is not configured yet.");
     }
     const result = await promptGoogle();
     if (result.type === "error") {
       throw new AuthError("Google sign-in failed. Please try again.");
     }
-  }, [googleRequest, promptGoogle]);
+  }, [hasGoogleConfig, googleRequest, promptGoogle]);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     try {
@@ -210,7 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       initialising,
       isAppleAvailable,
-      isGoogleReady: Boolean(googleRequest),
+      isGoogleReady: hasGoogleConfig && Boolean(googleRequest),
       signInWithApple,
       signInWithGoogle,
       signInWithEmail,
@@ -222,6 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       initialising,
       isAppleAvailable,
+      hasGoogleConfig,
       googleRequest,
       signInWithApple,
       signInWithGoogle,

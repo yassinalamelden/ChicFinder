@@ -100,12 +100,11 @@ export default function WelcomeScreen() {
         <View style={styles.hero}>
           <Text style={styles.wordmark}>Chic Finder</Text>
           <Text style={styles.headline}>
-            Snap an{"\n"}outfit.{"\n"}
-            <Text style={styles.headlineMuted}>Find it{"\n"}in Egypt.</Text>
+            Find fashion{"\n"}
+            <Text style={styles.headlineMuted}>that fits you.</Text>
           </Text>
           <Text style={styles.sub}>
-            Photograph any look and ChicFinder matches it against real products
-            from Egyptian brands.
+            Snap any outfit. Shop it from Egyptian brands.
           </Text>
         </View>
 
@@ -130,20 +129,24 @@ export default function WelcomeScreen() {
             />
           ) : null}
 
-          <Button
-            label="Continue with Google"
-            icon="logo-google"
-            variant="secondary"
-            loading={busy === "google"}
-            disabled={!isGoogleReady || busy !== null}
-            onPress={() => run("google", signInWithGoogle)}
-          />
+          {isGoogleReady ? (
+            <Button
+              label="Continue with Google"
+              icon="logo-google"
+              variant="secondary"
+              loading={busy === "google"}
+              disabled={busy !== null}
+              onPress={() => run("google", signInWithGoogle)}
+            />
+          ) : null}
 
-          <View style={styles.separator}>
-            <View style={styles.line} />
-            <Text style={styles.separatorText}>or</Text>
-            <View style={styles.line} />
-          </View>
+          {isAppleAvailable || isGoogleReady ? (
+            <View style={styles.separator}>
+              <View style={styles.line} />
+              <Text style={styles.separatorText}>or</Text>
+              <View style={styles.line} />
+            </View>
+          ) : null}
 
           <TextInput
             style={styles.input}
@@ -230,11 +233,11 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   content: {
     paddingHorizontal: spacing.lg + 4,
-    gap: spacing.xl,
+    gap: spacing.lg + 4,
     flexGrow: 1,
   },
 
-  hero: { gap: spacing.md },
+  hero: { gap: spacing.sm + 2 },
   wordmark: {
     ...typography.title,
     fontSize: 15,

@@ -29,9 +29,9 @@ export const colors = {
   /** Dark contrast blocks and the primary button. */
   olive: "#1e2300",
   /** The accent. Fills only, never text. */
-  accent: "#dcff00",
+  accent: "#e9a03c",
   /** Soft accent wash for icon tiles and empty states. */
-  accentSoft: "#eaf4a0",
+  accentSoft: "#f4e2c4",
   /** Destructive. Warmed so it belongs in this palette rather than iOS red. */
   danger: "#a63d2b",
   /** Text and icons that sit on `olive`. */
@@ -74,21 +74,21 @@ export const typography = {
   display: {
     fontFamily: fonts.display,
     fontSize: 38,
-    lineHeight: 38,
+    lineHeight: 42,
     letterSpacing: -0.4,
     textTransform: "uppercase" as const,
   },
   displayLarge: {
     fontFamily: fonts.display,
-    fontSize: 52,
-    lineHeight: 48,
+    fontSize: 46,
+    lineHeight: 50,
     letterSpacing: -0.8,
     textTransform: "uppercase" as const,
   },
   title: {
     fontFamily: fonts.display,
     fontSize: 26,
-    lineHeight: 27,
+    lineHeight: 30,
     letterSpacing: -0.2,
     textTransform: "uppercase" as const,
   },

@@ -26,7 +26,7 @@ from PIL import Image, ImageDraw
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 
 BG = (30, 35, 0, 255)         # colors.olive, the brand dark block
-ACCENT = (220, 255, 0, 255)   # colors.accent
+ACCENT = (233, 160, 60, 255)  # colors.accent, warm amber
 OLIVE = (30, 35, 0, 255)      # colors.olive, for marks drawn on the bone splash
 BONE = (237, 234, 226, 255)   # colors.bg
 SIZE = 1024
