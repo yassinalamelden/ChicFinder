@@ -55,6 +55,7 @@ export default function StoresScreen() {
 
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<Scope>("brands");
+  const [scrolled, setScrolled] = useState(false);
   const [items, setItems] = useState<StoreItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
   const [itemsError, setItemsError] = useState<string | null>(null);
@@ -78,6 +79,12 @@ export default function StoresScreen() {
   // Guards against a slow early request landing after a later one and
   // overwriting fresher results.
   const requestId = useRef(0);
+
+  // Each scope gets its own list, so the old scroll position does not survive
+  // the switch and the hairline must not either.
+  useEffect(() => {
+    setScrolled(false);
+  }, [scope]);
 
   useEffect(() => {
     if (scope !== "items") return;
@@ -130,9 +137,16 @@ export default function StoresScreen() {
     productUrl: item.product_url,
   }));
 
+  /**
+   * Pinned, not a ListHeaderComponent.
+   *
+   * As a list header it scrolled away with the rows, which put the search field
+   * and the scope switch out of reach exactly when a long list makes them most
+   * useful. Sitting outside the list, it stays put and the rows travel under it.
+   */
   const header = (
-    <View style={styles.headerBlock}>
-      <ScreenHeader title="Stores" subtitle="Egyptian brands in the catalog." />
+    <View style={[styles.headerBlock, scrolled && styles.headerBlockScrolled]}>
+      <ScreenHeader flush title="Stores" subtitle="Egyptian brands in the catalog." />
       <SearchField
         value={query}
         onChangeText={setQuery}
@@ -171,28 +185,36 @@ export default function StoresScreen() {
   const contentStyle = [
     styles.content,
     {
-      paddingTop: insets.top + spacing.sm,
+      paddingTop: spacing.md,
       paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.xl,
     },
   ];
 
+  /** Raises the header's hairline only once there is content beneath it. */
+  const onScroll = (offsetY: number) => {
+    const next = offsetY > 4;
+    if (next !== scrolled) setScrolled(next);
+  };
+
   // Remounted per scope: FlatList cannot change numColumns in place.
   if (scope === "items") {
     return (
-      <FlatList
-        key="items"
-        style={styles.root}
-        data={cards}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={cards.length ? styles.column : undefined}
-        contentContainerStyle={contentStyle}
-        showsVerticalScrollIndicator={false}
-        keyboardDismissMode="on-drag"
-        keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => <ProductCard item={item} />}
-        ListHeaderComponent={header}
-        ListEmptyComponent={
+      <View style={[styles.root, { paddingTop: insets.top + spacing.sm }]}>
+        {header}
+        <FlatList
+          key="items"
+          data={cards}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={cards.length ? styles.column : undefined}
+          contentContainerStyle={contentStyle}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          onScroll={(e) => onScroll(e.nativeEvent.contentOffset.y)}
+          renderItem={({ item }) => <ProductCard item={item} />}
+          ListEmptyComponent={
           itemsLoading ? (
             <LoadingState label="Searching the catalog" />
           ) : itemsError ? (
@@ -218,51 +240,54 @@ export default function StoresScreen() {
               subtitle={`No item mentions "${query.trim()}" yet.`}
             />
           )
-        }
-      />
+          }
+        />
+      </View>
     );
   }
 
   return (
-    <FlatList
-      key="brands"
-      style={styles.root}
-      data={visibleStores}
-      keyExtractor={(store) => store.id}
-      contentContainerStyle={contentStyle}
-      showsVerticalScrollIndicator={false}
-      keyboardDismissMode="on-drag"
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            load();
-          }}
-          tintColor={colors.muted}
-        />
-      }
-      ListHeaderComponent={header}
-      ListEmptyComponent={
-        query.trim() ? (
-          <MessageState
-            icon="search-outline"
-            align="top"
-            title="No brand matched"
-            subtitle="Try the All items scope to search inside every catalog instead."
-            action={<Button label="Search all items" onPress={() => setScope("items")} arrow />}
+    <View style={[styles.root, { paddingTop: insets.top + spacing.sm }]}>
+      {header}
+      <FlatList
+        key="brands"
+        data={visibleStores}
+        keyExtractor={(store) => store.id}
+        contentContainerStyle={contentStyle}
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        onScroll={(e) => onScroll(e.nativeEvent.contentOffset.y)}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+            tintColor={colors.muted}
           />
-        ) : (
-          <MessageState
-            icon="storefront-outline"
-            align="top"
-            title="No stores yet"
-            subtitle="Brands are being added. Check back soon."
-          />
-        )
-      }
-      renderItem={({ item }) => (
+        }
+        ListEmptyComponent={
+          query.trim() ? (
+            <MessageState
+              icon="search-outline"
+              align="top"
+              title="No brand matched"
+              subtitle="Try the All items scope to search inside every catalog instead."
+              action={<Button label="Search all items" onPress={() => setScope("items")} arrow />}
+            />
+          ) : (
+            <MessageState
+              icon="storefront-outline"
+              align="top"
+              title="No stores yet"
+              subtitle="Brands are being added. Check back soon."
+            />
+          )
+        }
+        renderItem={({ item }) => (
         <Pressable
           onPress={() => router.push(`/store/${item.id}`)}
           accessibilityRole="button"
@@ -298,8 +323,9 @@ export default function StoresScreen() {
 
           <Ionicons name="chevron-forward" size={18} color={colors.faint} />
         </Pressable>
-      )}
-    />
+        )}
+      />
+    </View>
   );
 }
 
@@ -308,7 +334,17 @@ const makeStyles = (c: Palette) => ({
   content: { paddingHorizontal: spacing.lg, gap: spacing.sm + 2 },
   column: { gap: spacing.md },
 
-  headerBlock: { gap: spacing.sm + 2, paddingBottom: spacing.xs },
+  headerBlock: {
+    gap: spacing.sm + 2,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: c.bg,
+    // Drawn only once the list has moved, so an unscrolled screen stays clean
+    // and the line appears exactly when it is doing work.
+    borderBottomWidth: 1,
+    borderBottomColor: "transparent",
+  },
+  headerBlockScrolled: { borderBottomColor: c.border },
   count: { ...typography.label, color: c.faint, marginTop: spacing.xs },
 
   row: {

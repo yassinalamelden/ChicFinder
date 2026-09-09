@@ -288,13 +288,20 @@ export function MessageState({
 export function ScreenHeader({
   title,
   subtitle,
+  flush = false,
 }: {
   title: string;
   subtitle?: string;
+  /**
+   * Drops the header's own padding, for a parent that already provides it.
+   * Without this the title indents twice and sits out of line with whatever
+   * sits under it.
+   */
+  flush?: boolean;
 }) {
   const styles = useThemedStyles(makeStyles);
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, flush && styles.headerFlush]}>
       <Text style={styles.headerTitle} accessibilityRole="header">
         {title}
       </Text>
@@ -427,6 +434,7 @@ const makeStyles = (c: Palette) => ({
     paddingTop: spacing.xs,
     paddingBottom: spacing.lg,
   },
+  headerFlush: { paddingHorizontal: 0, paddingBottom: spacing.xs },
   headerTitle: { ...typography.display, color: c.text },
   headerSubtitle: { ...typography.body, color: c.muted, marginTop: spacing.xs },
 
