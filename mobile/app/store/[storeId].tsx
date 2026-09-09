@@ -1,5 +1,10 @@
 /**
- * Store detail: brand header plus its catalog, filterable by category.
+ * Store detail: brand header plus its catalog, filterable by category and by
+ * text.
+ *
+ * The text filter runs on the device rather than through the backend's
+ * `?search=` parameter: the whole store's catalog is already in memory from
+ * the detail call, so filtering here is instant and costs no request.
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -9,7 +14,7 @@ import { useLocalSearchParams, useNavigation } from "expo-router";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
-import { Button, LoadingState, MessageState } from "../../src/components/ui";
+import { Button, LoadingState, MessageState, SearchField } from "../../src/components/ui";
 import { ProductCard, type ProductCardData } from "../../src/components/ProductCard";
 import { getStoreDetail, resolveImageUrl } from "../../src/lib/api";
 import {
@@ -39,6 +44,7 @@ export default function StoreDetailScreen() {
   const [store, setStore] = useState<Store | null>(null);
   const [items, setItems] = useState<StoreItem[]>([]);
   const [category, setCategory] = useState(ALL);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,10 +72,16 @@ export default function StoreDetailScreen() {
     return [ALL, ...Array.from(found).sort()];
   }, [items]);
 
-  const visible = useMemo(
-    () => (category === ALL ? items : items.filter((i) => i.category === category)),
-    [items, category]
-  );
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((item) => {
+      if (category !== ALL && item.category !== category) return false;
+      if (!q) return true;
+      return [item.name, item.type, item.color, item.category, item.description]
+        .filter(Boolean)
+        .some((field) => (field as string).toLowerCase().includes(q));
+    });
+  }, [items, category, query]);
 
   const cards: ProductCardData[] = visible.map((item) => ({
     id: item.id,
@@ -143,6 +155,14 @@ export default function StoreDetailScreen() {
             />
           ) : null}
 
+          {items.length > 0 ? (
+            <SearchField
+              value={query}
+              onChangeText={setQuery}
+              placeholder={`Search ${store.name}`}
+            />
+          ) : null}
+
           {categories.length > 2 ? (
             <ScrollView
               horizontal
@@ -173,12 +193,25 @@ export default function StoreDetailScreen() {
           </Text>
         </View>
       }
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
       ListEmptyComponent={
-        <MessageState
-          icon="shirt-outline"
-          title="No items here"
-          subtitle="This brand has nothing in that category yet."
-        />
+        query.trim() ? (
+          <MessageState
+            icon="search-outline"
+            align="top"
+            title="Nothing matched"
+            subtitle={`${store.name} has no item mentioning "${query.trim()}".`}
+            action={<Button label="Clear search" variant="secondary" onPress={() => setQuery("")} />}
+          />
+        ) : (
+          <MessageState
+            icon="shirt-outline"
+            align="top"
+            title="No items here"
+            subtitle="This brand has nothing in that category yet."
+          />
+        )
       }
     />
   );

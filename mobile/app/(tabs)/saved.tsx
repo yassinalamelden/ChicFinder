@@ -49,6 +49,7 @@ export default function SavedScreen() {
       <View style={[styles.root, { paddingTop: insets.top + spacing.sm }]}>
         <ScreenHeader title="Saved" />
         <SignInPrompt
+          align="top"
           icon="heart-outline"
           title="Keep what you love"
           subtitle="Sign in to save items and find them again on any device."

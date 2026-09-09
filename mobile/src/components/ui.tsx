@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Pressable,
   Text,
+  TextInput,
   View,
   StyleSheet,
   type StyleProp,
@@ -116,6 +117,112 @@ export function Button({
 }
 
 // ---------------------------------------------------------------------------
+// Search field
+// ---------------------------------------------------------------------------
+
+interface SearchFieldProps {
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder?: string;
+  /** Fired by the keyboard's search key, for scopes that hit the network. */
+  onSubmit?: () => void;
+  autoFocus?: boolean;
+  style?: StyleProp<ViewStyle>;
+}
+
+/**
+ * A pill search input.
+ *
+ * The clear button is a real control rather than `clearButtonMode`, which iOS
+ * only draws while the field has focus: here the query survives a dismissed
+ * keyboard, so the way out of it has to survive too.
+ */
+export function SearchField({
+  value,
+  onChangeText,
+  placeholder = "Search",
+  onSubmit,
+  autoFocus = false,
+  style,
+}: SearchFieldProps) {
+  const colors = useTheme();
+  const styles = useThemedStyles(makeStyles);
+
+  return (
+    <View style={[styles.searchField, style]}>
+      <Ionicons name="search" size={17} color={colors.faint} />
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.faint}
+        style={styles.searchInput}
+        returnKeyType="search"
+        onSubmitEditing={onSubmit}
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoFocus={autoFocus}
+        accessibilityLabel={placeholder}
+      />
+      {value.length > 0 ? (
+        <Pressable
+          onPress={() => onChangeText("")}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+        >
+          <Ionicons name="close-circle" size={18} color={colors.faint} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Segmented control
+// ---------------------------------------------------------------------------
+
+interface SegmentedProps<T extends string> {
+  options: Array<{ value: T; label: string }>;
+  value: T;
+  onChange: (value: T) => void;
+  style?: StyleProp<ViewStyle>;
+}
+
+/** Small two or three way switch, used for search scope and appearance. */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  style,
+}: SegmentedProps<T>) {
+  const styles = useThemedStyles(makeStyles);
+  return (
+    <View style={[styles.segmented, style]}>
+      {options.map((option) => {
+        const active = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              onChange(option.value);
+            }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            style={[styles.segment, active && styles.segmentActive]}
+          >
+            <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Screen states
 // ---------------------------------------------------------------------------
 
@@ -136,6 +243,12 @@ interface MessageStateProps {
   subtitle?: string;
   action?: ReactNode;
   tone?: "neutral" | "error";
+  /**
+   * "center" fills the remaining space, which is right for an error inside a
+   * list. "top" sits the block below the header instead of floating it in the
+   * middle of an otherwise empty screen.
+   */
+  align?: "center" | "top";
 }
 
 export function MessageState({
@@ -144,12 +257,13 @@ export function MessageState({
   subtitle,
   action,
   tone = "neutral",
+  align = "center",
 }: MessageStateProps) {
   const colors = useTheme();
   const styles = useThemedStyles(makeStyles);
   const isError = tone === "error";
   return (
-    <View style={styles.centered}>
+    <View style={[styles.centered, align === "top" && styles.centeredTop]}>
       <View style={[styles.stateRing, isError && { backgroundColor: colors.dangerSoft }]}>
         <Ionicons name={icon} size={32} color={isError ? colors.danger : colors.accent} />
       </View>
@@ -222,12 +336,56 @@ const makeStyles = (c: Palette) => ({
     justifyContent: "center" as const,
   },
 
+  searchField: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.sm,
+    height: 48,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+  },
+  searchInput: {
+    flex: 1,
+    ...typography.body,
+    color: c.text,
+    // Android centres poorly without this; iOS ignores it.
+    paddingVertical: 0,
+  },
+
+  segmented: {
+    flexDirection: "row" as const,
+    padding: 3,
+    borderRadius: radius.pill,
+    backgroundColor: c.surfaceAlt,
+  },
+  segment: {
+    flex: 1,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+  },
+  segmentActive: { backgroundColor: c.accent },
+  segmentText: {
+    ...typography.caption,
+    fontFamily: typography.bodyMedium.fontFamily,
+    color: c.muted,
+  },
+  segmentTextActive: { color: c.onAccent },
+
   centered: {
     flex: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     padding: spacing.xl,
     gap: spacing.sm,
+  },
+  centeredTop: {
+    justifyContent: "flex-start" as const,
+    paddingTop: spacing.xxl,
   },
   stateRing: {
     width: 76,
@@ -245,7 +403,12 @@ const makeStyles = (c: Palette) => ({
     textAlign: "center" as const,
     maxWidth: 270,
   },
-  stateAction: { marginTop: spacing.md, minWidth: 210 },
+  stateAction: {
+    marginTop: spacing.lg,
+    alignSelf: "stretch" as const,
+    maxWidth: 280,
+    width: "100%" as const,
+  },
 
   header: {
     paddingHorizontal: spacing.lg,

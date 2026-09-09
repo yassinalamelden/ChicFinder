@@ -5,7 +5,7 @@
  * never on screen load, and a denial explains how to fix it.
  */
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FlatList, Linking, Platform, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -14,7 +14,15 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Button, LoadingState, MessageState, ScreenHeader } from "../../src/components/ui";
 import { ProductCard, type ProductCardData } from "../../src/components/ProductCard";
+import { RecentSearches } from "../../src/components/RecentSearches";
 import { searchByPhoto } from "../../src/lib/api";
+import {
+  addRecent,
+  clearRecent,
+  dropRecent,
+  loadRecent,
+  type RecentSearch,
+} from "../../src/lib/recentSearches";
 import {
   TAB_BAR_HEIGHT,
   elevation,
@@ -42,6 +50,11 @@ export default function SearchScreen() {
   const [results, setResults] = useState<ChicFinderResult[]>([]);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [recent, setRecent] = useState<RecentSearch[]>([]);
+
+  useEffect(() => {
+    loadRecent().then(setRecent);
+  }, []);
 
   const runSearch = useCallback(async (uri: string, mimeType?: string) => {
     setPhotoUri(uri);
@@ -52,10 +65,17 @@ export default function SearchScreen() {
       setResults(data.results);
       setElapsedMs(data.processing_time_ms);
       setState("results");
+      // Only a search that actually returned earns a place in the strip: a
+      // failed one is not worth offering to repeat.
+      setRecent(await addRecent(uri, data.results.length));
     } catch (err) {
       setError((err as Error).message);
       setState("error");
     }
+  }, []);
+
+  const forgetRecent = useCallback((uri: string) => {
+    dropRecent(uri).then(setRecent);
   }, []);
 
   const explainDenial = (what: "camera" | "photos") => {
@@ -164,17 +184,29 @@ export default function SearchScreen() {
             />
 
             {state === "idle" ? (
-              <View style={styles.steps}>
-                {["Snap", "Match", "Shop"].map((step, i) => (
-                  <View key={step} style={styles.step}>
-                    <View style={styles.stepDot}>
-                      <Text style={styles.stepNumber}>{i + 1}</Text>
+              <>
+                <View style={styles.steps}>
+                  {["Snap", "Match", "Shop"].map((step, i) => (
+                    <View key={step} style={styles.step}>
+                      <View style={styles.stepDot}>
+                        <Text style={styles.stepNumber}>{i + 1}</Text>
+                      </View>
+                      <Text style={styles.stepLabel}>{step}</Text>
+                      {i < 2 ? <View style={styles.stepLine} /> : null}
                     </View>
-                    <Text style={styles.stepLabel}>{step}</Text>
-                    {i < 2 ? <View style={styles.stepLine} /> : null}
-                  </View>
-                ))}
-              </View>
+                  ))}
+                </View>
+
+                <RecentSearches
+                  items={recent}
+                  onSelect={(uri) => runSearch(uri)}
+                  onMissing={forgetRecent}
+                  onClear={() => {
+                    clearRecent();
+                    setRecent([]);
+                  }}
+                />
+              </>
             ) : null}
 
             {state === "results" ? (

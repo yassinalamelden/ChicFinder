@@ -7,12 +7,10 @@
  */
 
 import React from "react";
-import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { Button, MessageState } from "./ui";
-import { spacing } from "../theme";
 
 interface SignInPromptProps {
   title: string;
@@ -20,6 +18,8 @@ interface SignInPromptProps {
   icon?: keyof typeof Ionicons.glyphMap;
   /** Label for the primary action. */
   cta?: string;
+  /** Passed straight through to MessageState. */
+  align?: "center" | "top";
 }
 
 export function SignInPrompt({
@@ -27,6 +27,7 @@ export function SignInPrompt({
   subtitle,
   icon = "person-circle-outline",
   cta = "Sign in",
+  align = "center",
 }: SignInPromptProps) {
   const router = useRouter();
 
@@ -35,15 +36,14 @@ export function SignInPrompt({
       icon={icon}
       title={title}
       subtitle={subtitle}
+      align={align}
       action={
-        <View style={{ gap: spacing.sm + 2, width: "100%" }}>
-          <Button
-            label={cta}
-            variant="accent"
-            arrow
-            onPress={() => router.push("/(auth)/welcome")}
-          />
-        </View>
+        <Button
+          label={cta}
+          variant="accent"
+          arrow
+          onPress={() => router.push("/(auth)/welcome")}
+        />
       }
     />
   );

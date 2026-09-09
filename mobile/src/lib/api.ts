@@ -189,6 +189,26 @@ export function getStoreItems(
   return request<StoreItem[]>(`/api/v1/stores/${storeId}/items${qs}`, { auth: false });
 }
 
+/**
+ * Text search across every brand in the catalog.
+ *
+ * `storeId` narrows it back to one store, so the Stores tab and a store page
+ * can share this call instead of maintaining two search paths.
+ */
+export function searchItems(
+  opts: { search: string; category?: string; storeId?: string; limit?: number } = {
+    search: "",
+  }
+): Promise<StoreItem[]> {
+  const params = new URLSearchParams();
+  if (opts.search) params.set("search", opts.search);
+  if (opts.category) params.set("category", opts.category);
+  if (opts.storeId) params.set("store_id", opts.storeId);
+  if (opts.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString() ? `?${params}` : "";
+  return request<StoreItem[]>(`/api/v1/items${qs}`, { auth: false });
+}
+
 // ---------------------------------------------------------------------------
 // Saved items
 // ---------------------------------------------------------------------------

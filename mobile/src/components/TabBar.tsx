@@ -58,8 +58,9 @@ interface TabBarProps {
   };
 }
 
-const CAPSULE_WIDTH = 52;
-const CAPSULE_HEIGHT = 34;
+/** Inset of the capsule from the tab slot and from the bar's top and bottom. */
+const CAPSULE_INSET_X = 6;
+const CAPSULE_INSET_Y = 7;
 
 /** Matches iOS's own spring closely enough to feel native rather than eased. */
 const SPRING = { damping: 18, stiffness: 220, mass: 0.7 };
@@ -74,7 +75,8 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
   const capsuleX = useSharedValue(0);
   const settled = useSharedValue(false);
 
-  const target = slot > 0 ? state.index * slot + (slot - CAPSULE_WIDTH) / 2 : 0;
+  const capsuleWidth = Math.max(slot - CAPSULE_INSET_X * 2, 0);
+  const target = slot > 0 ? state.index * slot + CAPSULE_INSET_X : 0;
 
   // Driven from an effect rather than during render: writing a shared value
   // while rendering is a side effect, and it makes the first frame race the
@@ -110,7 +112,10 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
         <View style={[StyleSheet.absoluteFill, styles.tint]} />
 
         {slot > 0 ? (
-          <Animated.View style={[styles.capsule, capsuleStyle]} pointerEvents="none" />
+          <Animated.View
+            style={[styles.capsule, { width: capsuleWidth }, capsuleStyle]}
+            pointerEvents="none"
+          />
         ) : null}
 
         <View style={styles.row}>
@@ -186,9 +191,8 @@ const makeStyles = (c: Palette) => ({
 
   capsule: {
     position: "absolute" as const,
-    top: 9,
-    width: CAPSULE_WIDTH,
-    height: CAPSULE_HEIGHT,
+    top: CAPSULE_INSET_Y,
+    bottom: CAPSULE_INSET_Y,
     borderRadius: radius.pill,
     backgroundColor: c.accent,
   },
@@ -209,7 +213,7 @@ const makeStyles = (c: Palette) => ({
     color: c.muted,
   },
   labelActive: {
-    color: c.text,
+    color: c.onAccent,
     fontFamily: typography.button.fontFamily,
   },
 });
