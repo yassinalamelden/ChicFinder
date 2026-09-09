@@ -20,6 +20,7 @@ import * as Haptics from "expo-haptics";
 import { Button, ScreenHeader } from "../../src/components/ui";
 import { useAuth } from "../../src/context/AuthContext";
 import { useSaved } from "../../src/context/SavedContext";
+import { useOnboarding } from "../../src/context/OnboardingContext";
 import {
   TAB_BAR_HEIGHT,
   elevation,
@@ -44,6 +45,7 @@ const MODES: Array<{ value: ThemeMode; label: string; icon: keyof typeof Ionicon
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { reset: resetOnboarding } = useOnboarding();
   const colors = useTheme();
   const styles = useThemedStyles(makeStyles);
   const { mode, setMode } = useThemeMode();
@@ -157,6 +159,14 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.group}>
+        <Row
+          icon="information-circle-outline"
+          label="How ChicFinder works"
+          onPress={async () => {
+            await resetOnboarding();
+            router.push("/onboarding");
+          }}
+        />
         <Row
           icon="shield-checkmark-outline"
           label="Privacy Policy"

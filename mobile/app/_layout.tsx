@@ -3,7 +3,7 @@
  * whether a cold start lands on the welcome screen or the tabs.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -21,7 +21,7 @@ import {
 
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { SavedProvider } from "../src/context/SavedContext";
-import { hasOnboarded } from "../src/lib/onboarding";
+import { OnboardingProvider, useOnboarding } from "../src/context/OnboardingContext";
 import { ThemeProvider, typography, useTheme } from "../src/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -34,11 +34,7 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
 
   // null until the flag has been read. Deciding on a pending read would flash
   // the walkthrough at someone who dismissed it months ago.
-  const [onboarded, setOnboarded] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    hasOnboarded().then(setOnboarded);
-  }, []);
+  const { onboarded } = useOnboarding();
 
   const ready = fontsReady && !initialising && onboarded !== null;
 
@@ -127,11 +123,13 @@ function Root() {
   return (
     <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.bg }]}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <SavedProvider>
-            <RootNavigator fontsReady={canRender} />
-          </SavedProvider>
-        </AuthProvider>
+        <OnboardingProvider>
+          <AuthProvider>
+            <SavedProvider>
+              <RootNavigator fontsReady={canRender} />
+            </SavedProvider>
+          </AuthProvider>
+        </OnboardingProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

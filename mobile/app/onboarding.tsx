@@ -26,7 +26,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
 import { Button } from "../src/components/ui";
-import { markOnboarded } from "../src/lib/onboarding";
+import { useOnboarding } from "../src/context/OnboardingContext";
 import {
   radius,
   spacing,
@@ -66,13 +66,16 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const colors = useTheme();
   const styles = useThemedStyles(makeStyles);
+  const { complete } = useOnboarding();
   const scroller = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
 
   const last = index === PANELS.length - 1;
 
   const finish = async () => {
-    await markOnboarded();
+    // The flag must be true in memory before we navigate, or the root layout
+    // still sees a first launch and sends us straight back here.
+    await complete();
     router.replace("/(tabs)/search");
   };
 
