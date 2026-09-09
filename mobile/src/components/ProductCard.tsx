@@ -21,7 +21,9 @@ import {
   useThemedStyles,
   type Palette,
 } from "../theme";
-import { useSaved } from "../context/SavedContext";
+import { useRouter } from "expo-router";
+
+import { SignInRequiredError, useSaved } from "../context/SavedContext";
 
 export interface ProductCardData {
   id: string;
@@ -44,6 +46,7 @@ const EGP = new Intl.NumberFormat("en-EG", {
 export function ProductCard({ item }: { item: ProductCardData }) {
   const colors = useTheme();
   const styles = useThemedStyles(makeStyles);
+  const router = useRouter();
   const { isSaved, toggleSaved } = useSaved();
   const [saveError, setSaveError] = useState(false);
   const saved = isSaved(item.id);
@@ -59,7 +62,11 @@ export function ProductCard({ item }: { item: ProductCardData }) {
     setSaveError(false);
     try {
       await toggleSaved(item.id);
-    } catch {
+    } catch (err) {
+      if (err instanceof SignInRequiredError) {
+        router.push("/(auth)/welcome");
+        return;
+      }
       setSaveError(true);
     }
   };

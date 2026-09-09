@@ -21,6 +21,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Linking from "expo-linking";
 import Constants from "expo-constants";
@@ -43,6 +45,7 @@ const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string>;
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const colors = useTheme();
   const styles = useThemedStyles(makeStyles);
   const {
@@ -124,8 +127,22 @@ export default function WelcomeScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.hero}>
+        <View style={styles.topBar}>
           <Text style={styles.wordmark}>Chic Finder</Text>
+          {router.canGoBack() ? (
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Close and keep browsing"
+              style={styles.close}
+            >
+              <Ionicons name="close" size={20} color={colors.text} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        <View style={styles.hero}>
           <Text style={styles.headline}>
             Snap an outfit.{"\n"}
             <Text style={styles.headlineMuted}>Find it in Egypt.</Text>
@@ -275,6 +292,21 @@ const makeStyles = (c: Palette) => ({
     flexGrow: 1,
   },
 
+  topBar: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  close: {
+    width: 36,
+    height: 36,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: radius.pill,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
   hero: { gap: spacing.sm },
   wordmark: {
     ...typography.label,

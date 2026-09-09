@@ -10,6 +10,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 
 import { Button, LoadingState, MessageState, ScreenHeader } from "../../src/components/ui";
 import { ProductCard, type ProductCardData } from "../../src/components/ProductCard";
+import { SignInPrompt } from "../../src/components/SignInPrompt";
 import { useSaved } from "../../src/context/SavedContext";
 import { resolveImageUrl } from "../../src/lib/api";
 import {
@@ -25,7 +26,7 @@ export default function SavedScreen() {
   const router = useRouter();
   const colors = useTheme();
   const styles = useThemedStyles(makeStyles);
-  const { items, loading, error, refresh } = useSaved();
+  const { isSignedIn, items, loading, error, refresh } = useSaved();
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
@@ -42,6 +43,19 @@ export default function SavedScreen() {
     imageUrl: resolveImageUrl(item.image_url),
     productUrl: item.product_url,
   }));
+
+  if (!isSignedIn) {
+    return (
+      <View style={[styles.root, { paddingTop: insets.top + spacing.sm }]}>
+        <ScreenHeader title="Saved" />
+        <SignInPrompt
+          icon="heart-outline"
+          title="Keep what you love"
+          subtitle="Sign in to save items and find them again on any device."
+        />
+      </View>
+    );
+  }
 
   if (loading && items.length === 0) return <LoadingState label="Loading saved items" />;
 

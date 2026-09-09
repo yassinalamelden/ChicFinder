@@ -21,7 +21,7 @@ import {
 
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { SavedProvider } from "../src/context/SavedContext";
-import { typography, useTheme } from "../src/theme";
+import { ThemeProvider, typography, useTheme } from "../src/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -44,12 +44,12 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
 
     SplashScreen.hideAsync().catch(() => {});
 
-    const inAuthGroup = segments[0] === "(auth)";
-
-    if (!user && !inAuthGroup) {
-      router.replace("/(auth)/welcome");
-    } else if (user && inAuthGroup) {
-      router.replace("/(tabs)/search");
+    // The only redirect left: if the user signs in while the sign-in sheet is
+    // open, close it and return them to whatever sent them there. Signed-out
+    // users are NOT pushed anywhere; browsing works without an account.
+    if (user && segments[0] === "(auth)") {
+      if (router.canGoBack()) router.back();
+      else router.replace("/(tabs)/search");
     }
   }, [user, ready, segments, router]);
 
@@ -71,7 +71,10 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
           contentStyle: { backgroundColor: colors.bg },
         }}
       >
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="(auth)"
+          options={{ headerShown: false, presentation: "modal" }}
+        />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="store/[storeId]"
@@ -113,7 +116,11 @@ function Root() {
 }
 
 export default function RootLayout() {
-  return <Root />;
+  return (
+    <ThemeProvider>
+      <Root />
+    </ThemeProvider>
+  );
 }
 
 const styles = StyleSheet.create({

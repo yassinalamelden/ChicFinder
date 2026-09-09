@@ -12,9 +12,17 @@
  *   accent    amber. A FILL, never text: it fails contrast on both grounds
  */
 
-import { useColorScheme } from "react-native";
-import { useMemo } from "react";
-import { StyleSheet } from "react-native";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { StyleSheet, useColorScheme } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface Palette {
   bg: string;
@@ -94,9 +102,69 @@ const dark: Palette = {
 
 export const palettes = { light, dark };
 
+/** What the user picked in Profile, not what the phone is currently showing. */
+export type ThemeMode = "system" | "light" | "dark";
+
+interface ThemeContextValue {
+  colors: Palette;
+  mode: ThemeMode;
+  /** The palette actually in use, once "system" has been resolved. */
+  resolved: "light" | "dark";
+  setMode: (mode: ThemeMode) => void;
+}
+
+const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+const MODE_KEY = "chicfinder.themeMode";
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const system = useColorScheme();
+  const [mode, setModeState] = useState<ThemeMode>("system");
+
+  // Restore the saved choice. Until it lands the app follows the system, which
+  // is the right default and avoids a flash of the wrong palette.
+  useEffect(() => {
+    AsyncStorage.getItem(MODE_KEY)
+      .then((saved) => {
+        if (saved === "light" || saved === "dark" || saved === "system") {
+          setModeState(saved);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const setMode = useCallback((next: ThemeMode) => {
+    setModeState(next);
+    AsyncStorage.setItem(MODE_KEY, next).catch(() => {});
+  }, []);
+
+  const resolved: "light" | "dark" =
+    mode === "system" ? (system === "dark" ? "dark" : "light") : mode;
+
+  const value = useMemo<ThemeContextValue>(
+    () => ({ colors: palettes[resolved], mode, resolved, setMode }),
+    [resolved, mode, setMode]
+  );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
 export function useTheme(): Palette {
-  const scheme = useColorScheme();
-  return scheme === "dark" ? dark : light;
+  const ctx = useContext(ThemeContext);
+  // Falling back keeps any component usable outside the provider (tests, a
+  // screen rendered before the tree mounts) rather than throwing.
+  return ctx?.colors ?? light;
+}
+
+/** For the appearance control in Profile. */
+export function useThemeMode(): {
+  mode: ThemeMode;
+  resolved: "light" | "dark";
+  setMode: (mode: ThemeMode) => void;
+} {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) return { mode: "system", resolved: "light", setMode: () => {} };
+  return { mode: ctx.mode, resolved: ctx.resolved, setMode: ctx.setMode };
 }
 
 /**
@@ -137,7 +205,7 @@ export const radius = {
 } as const;
 
 /** Height of the floating glass tab bar, so screens can pad clear of it. */
-export const TAB_BAR_HEIGHT = 64;
+export const TAB_BAR_HEIGHT = 72;
 
 /**
  * Type ramp.

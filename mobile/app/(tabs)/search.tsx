@@ -155,23 +155,27 @@ export default function SearchScreen() {
               </Pressable>
             )}
 
-            <View style={styles.buttonRow}>
-              <Button
-                label="Camera"
-                icon="camera"
-                onPress={takePhoto}
-                disabled={state === "searching"}
-                style={styles.flexButton}
-              />
-              <Button
-                label="Photos"
-                icon="images-outline"
-                variant="secondary"
-                onPress={pickPhoto}
-                disabled={state === "searching"}
-                style={styles.flexButton}
-              />
-            </View>
+            <Button
+              label="Choose from photos"
+              icon="images-outline"
+              variant="secondary"
+              onPress={pickPhoto}
+              disabled={state === "searching"}
+            />
+
+            {state === "idle" ? (
+              <View style={styles.steps}>
+                {["Snap", "Match", "Shop"].map((step, i) => (
+                  <View key={step} style={styles.step}>
+                    <View style={styles.stepDot}>
+                      <Text style={styles.stepNumber}>{i + 1}</Text>
+                    </View>
+                    <Text style={styles.stepLabel}>{step}</Text>
+                    {i < 2 ? <View style={styles.stepLine} /> : null}
+                  </View>
+                ))}
+              </View>
+            ) : null}
 
             {state === "results" ? (
               <Text style={styles.resultsMeta}>
@@ -230,7 +234,8 @@ const makeStyles = (c: Palette) => ({
     alignItems: "center" as const,
     justifyContent: "center" as const,
     gap: spacing.xs + 2,
-    paddingVertical: spacing.xxl,
+    paddingVertical: 56,
+    paddingHorizontal: spacing.lg,
     borderRadius: radius.xl,
     backgroundColor: c.contrast,
     marginBottom: spacing.md,
@@ -271,14 +276,35 @@ const makeStyles = (c: Palette) => ({
     borderColor: c.glassBorder,
   },
 
-  buttonRow: { flexDirection: "row" as const, gap: spacing.sm + 2 },
-  flexButton: { flex: 1 },
-
   resultsMeta: {
     ...typography.label,
     color: c.faint,
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
   },
+  steps: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    marginTop: spacing.lg,
+  },
+  step: { flexDirection: "row" as const, alignItems: "center" as const },
+  stepDot: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.pill,
+    backgroundColor: c.accentSoft,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  stepNumber: { ...typography.label, fontSize: 10, color: c.text },
+  stepLabel: { ...typography.label, color: c.muted, marginLeft: 6 },
+  stepLine: {
+    width: 26,
+    height: 1,
+    backgroundColor: c.border,
+    marginHorizontal: spacing.sm,
+  },
+
   errorActions: { gap: spacing.sm + 2, width: "100%" as const },
 });

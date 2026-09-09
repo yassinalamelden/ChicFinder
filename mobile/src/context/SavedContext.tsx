@@ -22,6 +22,8 @@ import type { SavedItem } from "../types/api";
 import { useAuth } from "./AuthContext";
 
 interface SavedContextValue {
+  /** False for guests, so screens can show a sign-in prompt. */
+  isSignedIn: boolean;
   savedIds: Set<string>;
   items: SavedItem[];
   loading: boolean;
@@ -29,6 +31,14 @@ interface SavedContextValue {
   isSaved: (itemId: string) => boolean;
   toggleSaved: (itemId: string) => Promise<void>;
   refresh: () => Promise<void>;
+}
+
+/** Thrown when a guest tries to save. Callers route to sign-in on this. */
+export class SignInRequiredError extends Error {
+  constructor() {
+    super("Sign in to save items.");
+    this.name = "SignInRequiredError";
+  }
 }
 
 const SavedContext = createContext<SavedContextValue | null>(null);
@@ -68,7 +78,7 @@ export function SavedProvider({ children }: { children: ReactNode }) {
 
   const toggleSaved = useCallback(
     async (itemId: string) => {
-      if (!user) throw new Error("Sign in to save items.");
+      if (!user) throw new SignInRequiredError();
 
       const wasSaved = savedIds.has(itemId);
 
@@ -102,8 +112,17 @@ export function SavedProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<SavedContextValue>(
-    () => ({ savedIds, items, loading, error, isSaved, toggleSaved, refresh }),
-    [savedIds, items, loading, error, isSaved, toggleSaved, refresh]
+    () => ({
+      isSignedIn: Boolean(user),
+      savedIds,
+      items,
+      loading,
+      error,
+      isSaved,
+      toggleSaved,
+      refresh,
+    }),
+    [user, savedIds, items, loading, error, isSaved, toggleSaved, refresh]
   );
 
   return <SavedContext.Provider value={value}>{children}</SavedContext.Provider>;
