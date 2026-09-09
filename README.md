@@ -45,6 +45,16 @@ ChicFinder is an AI-powered fashion visual search system built for the Egyptian 
 - Product card results with brand, price, and similarity score
 - Firebase Auth — login/onboarding flow
 
+### 📲 iOS & Android App
+
+- Expo (React Native) app in `mobile/`, sharing the same backend and design tokens
+- Native camera and photo library capture
+- Sign in with Apple, Google, and email
+- Saved items (wishlist) synced across devices
+- In-app account deletion, as the App Store requires
+- See [`mobile/README.md`](mobile/README.md) and the
+  [App Store submission guide](docs/app-store-submission.md)
+
 ---
 
 ## 📸 Screenshots
@@ -207,7 +217,19 @@ The image installs from `requirements.lock` for a reproducible build.
 | GET | `/api/v1/stores` | Public | List all brand stores |
 | GET | `/api/v1/stores/{store_id}` | Public | Store detail + paginated item catalog |
 | GET | `/api/v1/stores/{store_id}/items` | Public | Store's product catalog |
+| GET | `/api/v1/saved` | 🔒 Firebase JWT | The caller's saved items, enriched with catalog metadata |
+| GET | `/api/v1/saved/ids` | 🔒 Firebase JWT | Saved item IDs only, for cheap save-state rendering |
+| PUT | `/api/v1/saved/{item_id}` | 🔒 Firebase JWT | Save an item (idempotent) |
+| DELETE | `/api/v1/saved/{item_id}` | 🔒 Firebase JWT | Unsave an item (idempotent) |
+| GET | `/api/v1/account` | 🔒 Firebase JWT | The caller's account summary |
+| DELETE | `/api/v1/account` | 🔒 Firebase JWT | Permanently delete the account and all its data |
 | GET | `/api/v1/health` | Public | Liveness probe |
+
+Saved items need their table created once:
+
+```bash
+psql "$DATABASE_URL" -f scripts/migrations/001_saved_items.sql
+```
 
 ---
 

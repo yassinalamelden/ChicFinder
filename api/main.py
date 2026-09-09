@@ -7,6 +7,7 @@ FastAPI application entry point.
 from contextlib import asynccontextmanager
 import json
 import logging
+import os
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -17,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import recommend, health, stores, search
+from api.routes import recommend, health, stores, search, saved, account
 from api.middleware.logging import LoggingMiddleware
 from chic_finder.config import settings
 
@@ -104,10 +105,26 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-# CORS — allow the Next.js dev server and any future deployed origins
+# CORS — the Next.js dev server, the Expo web dev server, and any origins added
+# via CORS_ORIGINS (comma-separated) for deployed frontends.
+#
+# The native iOS and Android builds send no Origin header, so CORS never applies
+# to them. This list only matters for browser-based clients.
+_DEFAULT_ORIGINS = [
+    "http://localhost:3000",   # Next.js dev
+    "http://127.0.0.1:3000",
+    "http://localhost:8081",   # Expo web / Metro dev
+    "http://127.0.0.1:8081",
+]
+_extra_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_DEFAULT_ORIGINS + _extra_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -120,6 +137,8 @@ app.include_router(recommend.router, prefix=settings.API_V1_STR, tags=["recommen
 app.include_router(health.router,    prefix=settings.API_V1_STR, tags=["health"])
 app.include_router(stores.router,    prefix=settings.API_V1_STR, tags=["stores"])
 app.include_router(search.router,    prefix=settings.API_V1_STR, tags=["search"])
+app.include_router(saved.router,     prefix=settings.API_V1_STR, tags=["saved"])
+app.include_router(account.router,   prefix=settings.API_V1_STR, tags=["account"])
 
 # ---------------------------------------------------------------------------
 # Static file mounts (directories must exist before mounting)
