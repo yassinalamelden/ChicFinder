@@ -13,7 +13,9 @@ Flow:
         -> FashionCLIPEncoder.encode()       (512-d L2-normalized vector)
         -> faiss.IndexFlatIP                 (cosine similarity via dot product)
         -> data/embeddings.index             (FAISS binary)
-        -> data/index_to_image_id.json       (faiss_id -> image filename)
+        -> data/index_to_image_id.json       (faiss_id -> {id, filename, image_url,
+                                               category, sub_category, color, style,
+                                               brand, price})
 """
 
 from __future__ import annotations
@@ -72,7 +74,7 @@ class FAISSIndexBuilder:
         logger.info("Building FAISS index for %d candidate images...", len(image_paths))
 
         index = faiss.IndexFlatIP(EMBEDDING_DIM)
-        mapping: dict[str, str] = {}
+        mapping: dict[str, dict] = {}
 
         for path in tqdm(image_paths, desc="Indexing images", unit="image"):
             metadata_key = path.stem
@@ -81,12 +83,23 @@ class FAISSIndexBuilder:
                     "Skipping %s: missing metadata key '%s'", path.name, metadata_key
                 )
                 continue
+            item_meta = metadata[metadata_key]
 
             try:
                 vector = self._embed_image(path)
                 faiss_id = str(index.ntotal)
                 index.add(np.expand_dims(vector, axis=0))
-                mapping[faiss_id] = path.name
+                mapping[faiss_id] = {
+                    "id": metadata_key,
+                    "filename": path.name,
+                    "image_url": (images_dir / path.name).as_posix(),
+                    "category": item_meta.get("category"),
+                    "sub_category": item_meta.get("sub_category", item_meta.get("subcategory")),
+                    "color": item_meta.get("color"),
+                    "style": item_meta.get("style"),
+                    "brand": item_meta.get("brand"),
+                    "price": item_meta.get("price"),
+                }
             except Exception as exc:
                 logger.warning("Skipping %s: %s", path.name, exc)
 
