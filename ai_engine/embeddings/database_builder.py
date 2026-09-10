@@ -27,6 +27,7 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
+from ai_engine.embeddings._io_utils import _atomic_write_faiss_index, _atomic_write_json
 from ai_engine.embeddings.encoder import EMBEDDING_DIM, get_encoder
 
 logger = logging.getLogger(__name__)
@@ -139,16 +140,14 @@ class FAISSIndexBuilder:
         with open(path, "rb") as file_obj:
             return self._encoder.encode(file_obj.read())
 
-    def _save(self, index, mapping: dict[str, str]) -> None:
-        """Persist FAISS index and id mapping to disk."""
-        import faiss
-
+    def _save(self, index, mapping: dict[str, dict]) -> None:
+        """Persist FAISS index and id mapping to disk, each atomically (see
+        _io_utils) so an interrupted write never leaves a corrupt file."""
         self.index_path.parent.mkdir(parents=True, exist_ok=True)
         self.mapping_path.parent.mkdir(parents=True, exist_ok=True)
 
-        faiss.write_index(index, str(self.index_path))
-        with open(self.mapping_path, "w", encoding="utf-8") as file_obj:
-            json.dump(mapping, file_obj, indent=2)
+        _atomic_write_faiss_index(index, self.index_path)
+        _atomic_write_json(mapping, self.mapping_path)
 
         logger.info("Saved index   -> %s", self.index_path)
         logger.info("Saved mapping -> %s", self.mapping_path)
