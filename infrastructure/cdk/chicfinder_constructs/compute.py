@@ -9,6 +9,11 @@ from chicfinder_constructs.filesystem import Filesystem
 
 APP_SECRETS_NAME = "chicfinder/app-secrets"
 
+# The real (Framer-hosted) production frontend origin — see api/main.py's
+# CORS_ORIGINS-driven middleware. Update here if the Framer site's published
+# URL or a connected custom domain changes.
+CORS_ORIGINS = "https://chicfinder.framer.website"
+
 # Container path where the shared EFS volume is mounted in both task
 # definitions (read-only for the API, read-write for the index builder).
 EFS_MOUNT_PATH = "/mnt/faiss-index"
@@ -76,6 +81,7 @@ class Compute(Construct):
                 "FAISS_INDEX_PATH": FAISS_INDEX_PATH,
                 "FAISS_MAPPING_PATH": FAISS_MAPPING_PATH,
                 "CLIP_MODEL_PATH": "NourAtef112/chicfinder-clip",
+                "CORS_ORIGINS": CORS_ORIGINS,
             },
             secrets={
                 "OPENROUTER_API_KEY": ecs.Secret.from_secrets_manager(

@@ -104,10 +104,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-# CORS — allow the Next.js dev server and any future deployed origins
+# CORS — origins come from settings.CORS_ORIGINS (env var CORS_ORIGINS), a
+# comma-separated list. Defaults to local dev only; production sets this to
+# include the real Framer frontend origin (see compute.py).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

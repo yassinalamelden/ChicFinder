@@ -15,6 +15,14 @@ class Config:
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "ChicFinder"
     APP_ENV: str = field(default_factory=lambda: os.getenv("APP_ENV", "development"))
+    # Comma-separated list of allowed CORS origins. Defaults to local dev only —
+    # production sets this explicitly (see infrastructure/cdk/chicfinder_constructs/compute.py)
+    # to include the real Framer frontend origin.
+    CORS_ORIGINS: str = field(
+        default_factory=lambda: os.getenv(
+            "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+        )
+    )
     
     # AI Model Settings (Gemini via OpenRouter's OpenAI-compatible API)
     OPENROUTER_API_KEY: str = field(default_factory=lambda: os.getenv("OPENROUTER_API_KEY", ""))
