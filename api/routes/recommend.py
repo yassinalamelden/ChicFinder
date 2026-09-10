@@ -32,6 +32,7 @@ router = APIRouter()
 
 UPLOADS_DIR = Path("uploads")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 # Initialize local vector store globally (None if index not built yet)
 try:
@@ -45,6 +46,29 @@ def _ensure_uploads_dir() -> None:
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+async def _read_validated_image(file: UploadFile) -> tuple[bytes, Image.Image]:
+    """Extension whitelist + size cap + a real decode — shared by /upload and
+    /recommend so neither accepts a spoofed-extension non-image or an
+    unbounded body."""
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Invalid file type. Images only.")
+
+    raw_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(raw_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Image too large. Max {MAX_UPLOAD_BYTES // (1024 * 1024)}MB.",
+        )
+
+    try:
+        image = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Corrupted image format. Error: {exc}")
+
+    return raw_bytes, image
+
+
 # ---------------------------------------------------------------------------
 # POST /upload
 # ---------------------------------------------------------------------------
@@ -54,15 +78,12 @@ async def upload_image(
     file: UploadFile = File(...),
     _user: dict = Depends(get_current_user),
 ):
-    suffix = Path(file.filename or "").suffix.lower()
-    if suffix not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Invalid file type. Images only.")
+    contents, _image = await _read_validated_image(file)
 
     _ensure_uploads_dir()
 
     saved_filename = f"{uuid.uuid4()}_{file.filename}"
     save_path = UPLOADS_DIR / saved_filename
-    contents = await file.read()
     save_path.write_bytes(contents)
 
     return {
@@ -81,20 +102,11 @@ async def get_recommendations(
     file: UploadFile = File(...),
     user: dict = Depends(get_current_user),
 ):
-    suffix = Path(file.filename or "image.png").suffix.lower()
-    if suffix not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Invalid file type. Images only.")
-
-    raw_bytes = await file.read()
-
-    # ─── 1. BULLETPROOF IMAGE SANITIZATION ───
-    try:
-        img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
-        query_url = None
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Corrupted image format. Error: {e}")
+    raw_bytes, img = await _read_validated_image(file)
+    query_url = None
 
     # ─── GEMINI RAG PIPELINE (OutfitParser + FashionCLIP + VisionReranker) ───
+    fallback_reason = None
     try:
         service = get_recommendation_service()
         rag_responses = await service.process_recommendation(raw_bytes)
@@ -105,9 +117,17 @@ async def get_recommendations(
                 "engine_used": "Gemini_RAG_Pipeline",
                 "recommendations": rag_responses,
             }
-        # Gemini parsed zero garments — fall through to the FAISS fallback below.
+        # Gemini parsed zero garments (not a failure) — fall through to the
+        # FAISS fallback below.
+        fallback_reason = "no_garments_found"
+        logger.info("Gemini RAG pipeline found no garments — falling back to local FAISS.")
     except Exception as exc:
-        logger.warning("RAG pipeline failed, falling back to local FAISS: %s", exc)
+        # A real failure (bad/expired key, OpenRouter outage, rate limit,
+        # etc.), distinct from "found nothing" above — logged at error level
+        # and surfaced in the response so this isn't indistinguishable from
+        # a genuinely empty result once it silently falls back.
+        fallback_reason = "primary_pipeline_error"
+        logger.error("RAG pipeline failed, falling back to local FAISS: %s", exc)
 
     # ─── 2. LOCAL FASHIONCLIP + FAISS SEARCH ───
     if vector_store is None:
@@ -148,6 +168,7 @@ async def get_recommendations(
             "success": True,
             "query_url": query_url,
             "engine_used": "Local_FashionCLIP_FAISS",
+            "fallback_reason": fallback_reason,
             "recommendations": [fallback_recommendation]
         }
 
