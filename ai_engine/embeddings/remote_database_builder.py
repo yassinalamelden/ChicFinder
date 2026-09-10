@@ -25,6 +25,7 @@ from tqdm import tqdm
 from ai_engine.embeddings._io_utils import _atomic_write_faiss_index, _atomic_write_json
 from ai_engine.embeddings.encoder import EMBEDDING_DIM, get_encoder
 from chic_finder.db import ITEM_COLUMNS, get_pool
+from shared.utils.s3_urls import public_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -114,10 +115,12 @@ class RemoteIndexBuilder:
         image_bytes = obj["Body"].read()
         return self._encoder.encode(image_bytes)
 
-    def _public_image_url(self, image_key: str) -> str:
-        """CatalogImages is a public-read bucket (infrastructure/cdk/chicfinder_constructs/storage.py)."""
-        region = self._s3.meta.region_name
-        return f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{image_key}"
+    def _public_image_url(self, image_key: str) -> str | None:
+        return public_image_url(
+            image_key,
+            bucket_name=self.bucket_name,
+            region=self._s3.meta.region_name,
+        )
 
     def _save(self, index, mapping: dict[str, dict]) -> None:
         """Persist FAISS index and id mapping to disk, each atomically (see

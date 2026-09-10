@@ -5,31 +5,60 @@ Routes:
   GET /api/v1/stores                    → list all stores
   GET /api/v1/stores/{store_id}         → store detail + all items
   GET /api/v1/stores/{store_id}/items   → items with optional filters
+
+Backed by the RDS catalog (the `items` table), same source of truth as
+/search. These routes previously read products.json/stores.json from the repo
+root; those files stopped being tracked in git (commit bea05a5), so they were
+absent from the Docker image and every one of these endpoints silently
+returned an empty list in production.
 """
 
-from fastapi import APIRouter, HTTPException, Query, Request
+import logging
+
+from fastapi import APIRouter, HTTPException, Query
+from starlette.concurrency import run_in_threadpool
 
 from api.models.schemas import Store, StoreDetailResponse, StoreItem
+from chic_finder.db import get_items_by_store, get_stores
+from shared.utils.s3_urls import public_image_url
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-def _product_to_store_item(p: dict) -> StoreItem:
+def _item_to_store_item(item: dict) -> StoreItem:
+    """Maps an RDS `items` row to the StoreItem response shape.
+
+    `sizes` and `description` have no column in the catalog schema, so they
+    come back empty/None rather than being invented.
+    """
+    price = item.get("price")
     return StoreItem(
-        id=p.get("id", ""),
-        name=p.get("name", ""),
-        brand=p.get("brand", ""),
-        category=p.get("category", ""),
-        type=p.get("type", ""),
-        color=p.get("color", ""),
-        price_egp=float(p.get("price_egp", 0)),
-        sizes=p.get("sizes", []),
-        image_url=p.get("image_url"),
-        product_url=p.get("product_url"),
-        description=p.get("description"),
-        store_id=p.get("store_id", ""),
-        store_location=p.get("store_location"),
+        id=str(item.get("id", "")),
+        name=item.get("title") or "",
+        brand=item.get("brand"),
+        category=item.get("category"),
+        type=item.get("sub_category"),
+        color=item.get("color"),
+        price_egp=float(price) if price is not None else 0.0,
+        sizes=[],
+        image_url=public_image_url(item.get("image_key")),
+        product_url=item.get("product_url"),
+        description=None,
+        store_id=str(item.get("store_id") or ""),
+        store_location=None,
     )
+
+
+async def _load_stores() -> list[dict]:
+    """Fetches the store list, degrading to empty rather than 500ing when RDS
+    is unavailable (mirrors how /search handles enrichment failures)."""
+    try:
+        return await run_in_threadpool(get_stores)
+    except Exception as exc:
+        logger.warning("Store listing unavailable — RDS query failed: %s", exc)
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -37,12 +66,9 @@ def _product_to_store_item(p: dict) -> StoreItem:
 # ---------------------------------------------------------------------------
 
 @router.get("/stores", response_model=list[Store])
-async def list_stores(
-    request: Request,
-):
-    """Return all collaborating stores."""
-    stores = getattr(request.app.state, "stores", [])
-    return [Store(**s) for s in stores]
+async def list_stores():
+    """Return all stores present in the catalog."""
+    return [Store(**s) for s in await _load_stores()]
 
 
 # ---------------------------------------------------------------------------
@@ -50,23 +76,21 @@ async def list_stores(
 # ---------------------------------------------------------------------------
 
 @router.get("/stores/{store_id}", response_model=StoreDetailResponse)
-async def get_store(
-    store_id: str,
-    request: Request,
-):
+async def get_store(store_id: str):
     """Return store metadata plus all its products."""
-    stores_lookup = getattr(request.app.state, "stores_lookup", {})
-    store_data = stores_lookup.get(store_id)
+    store_data = next(
+        (s for s in await _load_stores() if s["id"] == store_id), None
+    )
     if not store_data:
         raise HTTPException(status_code=404, detail=f"Store '{store_id}' not found.")
 
-    products = getattr(request.app.state, "products", [])
-    store_products = [p for p in products if p.get("store_id") == store_id]
+    items = await run_in_threadpool(get_items_by_store, store_id)
+    store_items = [_item_to_store_item(item) for item in items]
 
     return StoreDetailResponse(
         store=Store(**store_data),
-        items=[_product_to_store_item(p) for p in store_products],
-        total_items=len(store_products),
+        items=store_items,
+        total_items=len(store_items),
     )
 
 
@@ -77,26 +101,23 @@ async def get_store(
 @router.get("/stores/{store_id}/items", response_model=list[StoreItem])
 async def get_store_items(
     store_id: str,
-    request: Request,
     category: str = Query(default="", description="Filter by category (tops/bottoms/shoes)"),
     search: str = Query(default="", description="Text search on name and type"),
 ):
     """Return items for a store with optional category and text filters."""
-    stores_lookup = getattr(request.app.state, "stores_lookup", {})
-    if store_id not in stores_lookup:
+    if not any(s["id"] == store_id for s in await _load_stores()):
         raise HTTPException(status_code=404, detail=f"Store '{store_id}' not found.")
 
-    products = getattr(request.app.state, "products", [])
-    items = [p for p in products if p.get("store_id") == store_id]
+    items = [_item_to_store_item(item) for item in await run_in_threadpool(get_items_by_store, store_id)]
 
     if category:
-        items = [p for p in items if p.get("category", "").lower() == category.lower()]
+        items = [i for i in items if (i.category or "").lower() == category.lower()]
 
     if search:
         q = search.lower()
         items = [
-            p for p in items
-            if q in p.get("name", "").lower() or q in p.get("type", "").lower()
+            i for i in items
+            if q in (i.name or "").lower() or q in (i.type or "").lower()
         ]
 
-    return [_product_to_store_item(p) for p in items]
+    return items

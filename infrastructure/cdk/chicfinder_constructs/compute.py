@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from aws_cdk import Duration, aws_ec2 as ec2, aws_ecs as ecs, aws_ecs_patterns as ecs_patterns
+from aws_cdk import Duration, Stack, aws_ec2 as ec2, aws_ecs as ecs, aws_ecs_patterns as ecs_patterns
 from aws_cdk import aws_iam as iam, aws_s3 as s3, aws_secretsmanager as secretsmanager
 from constructs import Construct
 
@@ -78,6 +78,7 @@ class Compute(Construct):
                 "APP_ENV": "production",
                 "DB_SECRET_ARN": database.secret.secret_arn,
                 "S3_BUCKET_NAME": bucket.bucket_name,
+                "AWS_REGION": Stack.of(self).region,
                 "FAISS_INDEX_PATH": FAISS_INDEX_PATH,
                 "FAISS_MAPPING_PATH": FAISS_MAPPING_PATH,
                 "CLIP_MODEL_PATH": "NourAtef112/chicfinder-clip",
@@ -173,6 +174,7 @@ class Compute(Construct):
                 "APP_ENV": "production",
                 "DB_SECRET_ARN": database.secret.secret_arn,
                 "S3_BUCKET_NAME": bucket.bucket_name,
+                "AWS_REGION": Stack.of(self).region,
                 "CLIP_MODEL_PATH": "NourAtef112/chicfinder-clip",
             },
             logging=ecs.LogDriver.aws_logs(stream_prefix="chicfinder-index-builder"),
