@@ -5,7 +5,6 @@ FastAPI application entry point.
 """
 
 from contextlib import asynccontextmanager
-import json
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
@@ -60,37 +59,11 @@ async def lifespan(app: FastAPI):
     # except Exception as exc:
     #     logger.error("Unexpected error pre-warming FAISSVectorStore: %s", exc)
 
-    # Load products.json (used by /stores routes)
-    app.state.products = []
-    app.state.products_lookup = {}
-    products_path = Path(__file__).parent.parent / "products.json"
-    if products_path.exists():
-        try:
-            with open(products_path) as f:
-                products = json.load(f)
-                app.state.products = products
-                app.state.products_lookup = {p.get("id"): p for p in products if p.get("id")}
-                logger.info("Loaded %d products from products.json", len(products))
-        except Exception as exc:
-            logger.error("Failed to load products.json: %s", exc)
-    else:
-        logger.warning("products.json not found at project root")
-
-    # Load stores.json
-    app.state.stores = []
-    app.state.stores_lookup = {}
-    stores_path = Path(__file__).parent.parent / "stores.json"
-    if stores_path.exists():
-        try:
-            with open(stores_path) as f:
-                store_list = json.load(f)
-                app.state.stores = store_list
-                app.state.stores_lookup = {s.get("id"): s for s in store_list if s.get("id")}
-                logger.info("Loaded %d stores from stores.json", len(store_list))
-        except Exception as exc:
-            logger.error("Failed to load stores.json: %s", exc)
-    else:
-        logger.warning("stores.json not found at project root")
+    # NOTE: /stores used to be served from products.json/stores.json loaded
+    # here. Those files stopped being tracked in git (bea05a5), so they never
+    # reached the Docker image and every /stores response was silently empty
+    # in production. The routes now read the RDS catalog directly, same source
+    # of truth as /search — nothing to load at startup.
 
     yield  # application runs here
 
@@ -102,7 +75,18 @@ async def lifespan(app: FastAPI):
 # Application
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+_IS_PRODUCTION = settings.APP_ENV == "production"
+
+# Swagger/ReDoc are served publicly by default, which publishes the whole API
+# surface to anyone who finds the load balancer. Keep them in development,
+# switch them off in production.
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    lifespan=lifespan,
+    docs_url=None if _IS_PRODUCTION else "/docs",
+    redoc_url=None if _IS_PRODUCTION else "/redoc",
+    openapi_url=None if _IS_PRODUCTION else "/openapi.json",
+)
 
 # CORS — origins come from settings.CORS_ORIGINS (env var CORS_ORIGINS), a
 # comma-separated list. Defaults to local dev only; production sets this to
@@ -142,14 +126,17 @@ app.mount("/images",  StaticFiles(directory=str(_DATA_DIR)),    name="images")
 
 @app.get("/")
 async def root():
+    """Service banner. Paths are relative — this is served from a load balancer
+    in production, so absolute localhost URLs would be wrong for every caller."""
+    endpoints = {"api_v1": settings.API_V1_STR, "health": f"{settings.API_V1_STR}/health"}
+    if not _IS_PRODUCTION:
+        endpoints["docs"] = "/docs"
+        endpoints["redoc"] = "/redoc"
+
     return {
         "name": settings.PROJECT_NAME,
         "version": "1.0.0",
         "description": "Egyptian Fashion Recommendation Engine",
-        "endpoints": {
-            "docs":    "http://localhost:8000/docs",
-            "redoc":   "http://localhost:8000/redoc",
-            "api_v1":  "/api/v1/",
-        },
-        "frontend": "http://localhost:3000",
+        "environment": settings.APP_ENV,
+        "endpoints": endpoints,
     }
