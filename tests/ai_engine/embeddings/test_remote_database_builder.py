@@ -9,14 +9,25 @@ from ai_engine.embeddings.remote_database_builder import RemoteIndexBuilder
 
 
 @mock_aws
-def test_build_indexes_items_from_s3_and_rds(tmp_path):
+def test_build_indexes_items_from_s3_and_rds(tmp_path, monkeypatch):
+    # RemoteIndexBuilder creates its own boto3 client with no explicit region
+    # (ai_engine/embeddings/remote_database_builder.py), so it resolves region
+    # from the environment — pin it so the expected image_url is deterministic
+    # regardless of the machine's ambient AWS config.
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
     bucket_name = "test-chicfinder-catalog"
     s3 = boto3.client("s3", region_name="us-east-1")
     s3.create_bucket(Bucket=bucket_name)
     s3.put_object(Bucket=bucket_name, Key="item1.jpg", Body=b"fake-image-bytes")
 
+    # Row order must match chic_finder.db.ITEM_COLUMNS:
+    # id, category, sub_category, color, style, brand, price, product_url,
+    # availability, image_key, store_id, title, product_id
     fake_cursor = MagicMock()
-    fake_cursor.fetchall.return_value = [("item1", "item1.jpg")]
+    fake_cursor.fetchall.return_value = [
+        ("item1", "tops", "t-shirt", "blue", "casual", "Mobaco", 400.0,
+         "https://mobaco.com", True, "item1.jpg", "store1", "Blue Tee", "001")
+    ]
     fake_conn = MagicMock()
     fake_conn.cursor.return_value.__enter__.return_value = fake_cursor
     fake_pool = MagicMock()
@@ -39,7 +50,19 @@ def test_build_indexes_items_from_s3_and_rds(tmp_path):
 
     assert index_path.exists()
     mapping = json.loads(mapping_path.read_text())
-    assert mapping == {"0": "item1.jpg"}
+    assert mapping == {
+        "0": {
+            "id": "item1",
+            "filename": "item1.jpg",
+            "image_url": f"https://{bucket_name}.s3.us-east-1.amazonaws.com/item1.jpg",
+            "category": "tops",
+            "sub_category": "t-shirt",
+            "color": "blue",
+            "style": "casual",
+            "brand": "Mobaco",
+            "price": 400.0,
+        }
+    }
 
 
 @mock_aws

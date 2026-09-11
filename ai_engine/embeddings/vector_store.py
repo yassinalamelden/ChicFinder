@@ -88,6 +88,15 @@ class FAISSVectorStore:
         with open(metadata_path) as f:
             self._metadata: dict = json.load(f)
 
+        if self._index.ntotal != len(self._metadata):
+            raise ValueError(
+                f"FAISS index/mapping mismatch: index has {self._index.ntotal} "
+                f"vectors but {metadata_path} has {len(self._metadata)} entries. "
+                "The index and its mapping were built by different runs (e.g. an "
+                "interrupted rebuild) — rebuild with scripts/02_build_faiss_index.py "
+                "rather than serving results that would be silently misaligned."
+            )
+
         logger.info("FAISSVectorStore ready | vectors=%d", self._index.ntotal)
 
     # ------------------------------------------------------------------

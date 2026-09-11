@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from aws_cdk import Duration, aws_ec2 as ec2, aws_ecs as ecs, aws_ecs_patterns as ecs_patterns
+from aws_cdk import Duration, Stack, aws_ec2 as ec2, aws_ecs as ecs, aws_ecs_patterns as ecs_patterns
 from aws_cdk import aws_iam as iam, aws_s3 as s3, aws_secretsmanager as secretsmanager
 from constructs import Construct
 
@@ -8,6 +8,11 @@ from chicfinder_constructs.database import Database
 from chicfinder_constructs.filesystem import Filesystem
 
 APP_SECRETS_NAME = "chicfinder/app-secrets"
+
+# The real (Framer-hosted) production frontend origin — see api/main.py's
+# CORS_ORIGINS-driven middleware. Update here if the Framer site's published
+# URL or a connected custom domain changes.
+CORS_ORIGINS = "https://chicfinder.framer.website"
 
 # Container path where the shared EFS volume is mounted in both task
 # definitions (read-only for the API, read-write for the index builder).
@@ -73,9 +78,11 @@ class Compute(Construct):
                 "APP_ENV": "production",
                 "DB_SECRET_ARN": database.secret.secret_arn,
                 "S3_BUCKET_NAME": bucket.bucket_name,
+                "AWS_REGION": Stack.of(self).region,
                 "FAISS_INDEX_PATH": FAISS_INDEX_PATH,
                 "FAISS_MAPPING_PATH": FAISS_MAPPING_PATH,
                 "CLIP_MODEL_PATH": "NourAtef112/chicfinder-clip",
+                "CORS_ORIGINS": CORS_ORIGINS,
             },
             secrets={
                 "OPENROUTER_API_KEY": ecs.Secret.from_secrets_manager(
@@ -167,6 +174,7 @@ class Compute(Construct):
                 "APP_ENV": "production",
                 "DB_SECRET_ARN": database.secret.secret_arn,
                 "S3_BUCKET_NAME": bucket.bucket_name,
+                "AWS_REGION": Stack.of(self).region,
                 "CLIP_MODEL_PATH": "NourAtef112/chicfinder-clip",
             },
             logging=ecs.LogDriver.aws_logs(stream_prefix="chicfinder-index-builder"),

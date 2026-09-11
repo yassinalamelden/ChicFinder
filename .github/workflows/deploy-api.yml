@@ -36,6 +36,12 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install app dependencies
+        run: pip install -r requirements.lock
+
+      - name: Run tests
+        run: pytest
+
       - name: Install CDK app dependencies
         working-directory: infrastructure/cdk
         run: pip install -r requirements.txt

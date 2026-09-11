@@ -29,6 +29,17 @@ class ChicFinderStack(Stack):
         CfnOutput(self, "ApiServiceName", value=self.compute.api_service.service.service_name)
         CfnOutput(
             self,
+            "ApiBaseUrl",
+            value=f"http://{self.compute.api_service.load_balancer.load_balancer_dns_name}",
+            description=(
+                "Plain-HTTP ALB address — the only address the API has until "
+                "a domain + ACM certificate are wired up for HTTPS (see the "
+                "2026-09-10 audit, finding B0). iOS will refuse to call this "
+                "over HTTP by default (App Transport Security)."
+            ),
+        )
+        CfnOutput(
+            self,
             "IndexBuilderTaskDefinitionArn",
             value=self.compute.builder_task_definition.task_definition_arn,
         )

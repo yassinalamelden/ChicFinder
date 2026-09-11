@@ -169,14 +169,12 @@ uvicorn api.main:app --reload
 # Backend runs on http://localhost:8000
 ```
 
-**4. Frontend Setup**
+**4. Frontend**
 
-```bash
-cd FrontEnd
-npm install
-npm run dev
-# Frontend runs on http://localhost:3000
-```
+The real frontend is [Framer](https://www.framer.com), external to this repo.
+`FrontEnd/` (Next.js) is **abandoned/superseded** — it still has real commits
+and calls this API, but it is not the product's frontend; don't run it
+expecting to see the live product, and ask before building on it.
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for troubleshooting and more detail.
 
@@ -191,9 +189,9 @@ docker build -f infrastructure/docker/Dockerfile.api -t chicfinder-api .
 docker run -p 8000:8000 --env-file .env chicfinder-api
 ```
 
-The image installs from `requirements.lock` for a reproducible build.
-
-> `infrastructure/docker/docker-compose.yml` predates the Next.js migration and still targets the old Streamlit frontend — don't rely on it until it's updated.
+The image installs from `requirements.lock` for a reproducible build. There is
+no local docker-compose stack — the removed one targeted a Streamlit frontend
+that no longer exists; the real frontend is Framer, external to this repo.
 
 ---
 
