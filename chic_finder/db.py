@@ -97,6 +97,79 @@ def get_items_by_ids(ids: list[str]) -> dict[str, dict]:
         pool.putconn(conn)
 
 
+# Searched in this order, which is also the ranking: a query matching an
+# item's own title should outrank one that only matches its brand.
+SEARCH_FIELDS = ("title", "sub_category", "category", "color", "brand")
+
+
+def search_catalog(
+    query: str = "",
+    category: str = "",
+    store_id: str = "",
+    limit: int = 60,
+) -> list[dict]:
+    """Text search across the whole catalog.
+
+    Ranked and paged in SQL rather than in Python. The mobile app's text
+    search and its cross-store item search both run through here, and pulling
+    the full `items` table into the API process on every keystroke would not
+    survive a real catalog.
+
+    Postgres ILIKE is used rather than full-text search: the catalog's
+    searchable columns are short labels, not prose, so a substring match is
+    both what users expect ("den" finding "Denim") and cheaper to reason about
+    than a tsvector with no dictionary tuned for brand names.
+    """
+    pattern = f"%{query.strip()}%" if query.strip() else None
+
+    where = []
+    params: list = []
+
+    if pattern is not None:
+        where.append(
+            "(" + " OR ".join(f"{field} ILIKE %s" for field in SEARCH_FIELDS) + ")"
+        )
+        params.extend([pattern] * len(SEARCH_FIELDS))
+
+    if category:
+        where.append("LOWER(category) = LOWER(%s)")
+        params.append(category)
+
+    if store_id:
+        where.append("store_id = %s")
+        params.append(store_id)
+
+    clause = f"WHERE {' AND '.join(where)}" if where else ""
+
+    if pattern is not None:
+        # CASE arms in SEARCH_FIELDS order, so a title hit sorts before a brand
+        # hit. `id` breaks ties so an unchanged catalog gives an unchanged order.
+        arms = " ".join(
+            f"WHEN {field} ILIKE %s THEN {position}"
+            for position, field in enumerate(SEARCH_FIELDS)
+        )
+        order = f"ORDER BY CASE {arms} ELSE {len(SEARCH_FIELDS)} END, id"
+        params.extend([pattern] * len(SEARCH_FIELDS))
+    else:
+        order = "ORDER BY id"
+
+    params.append(limit)
+
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                f"SELECT {ITEM_COLUMNS} FROM items {clause} {order} LIMIT %s;",
+                tuple(params),
+            )
+            columns = [desc[0] for desc in cursor.description]
+            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    finally:
+        conn.rollback()
+        pool.putconn(conn)
+
+
 # ---------------------------------------------------------------------------
 # Saved items (wishlist)
 #

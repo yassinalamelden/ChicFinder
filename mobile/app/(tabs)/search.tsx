@@ -26,6 +26,7 @@ import {
   SearchField,
 } from "../../src/components/ui";
 import { ProductCard, type ProductCardData } from "../../src/components/ProductCard";
+import { SignInPrompt } from "../../src/components/SignInPrompt";
 import { RecentSearches } from "../../src/components/RecentSearches";
 import {
   DEFAULT_FILTERS,
@@ -33,7 +34,7 @@ import {
   applyFilters,
   type FilterState,
 } from "../../src/components/ResultFilters";
-import { resolveImageUrl, searchByPhoto, searchItems } from "../../src/lib/api";
+import { ApiError, resolveImageUrl, searchByPhoto, searchItems } from "../../src/lib/api";
 import {
   addRecent,
   clearRecent,
@@ -74,6 +75,10 @@ export default function SearchScreen() {
   const [results, setResults] = useState<ChicFinderResult[]>([]);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // Kept alongside the message because 401 is not a failure to report, it is a
+  // different screen: the deployed API requires a token on /recommend, so a
+  // guest tapping the camera needs an invitation to sign in, not an error.
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [recent, setRecent] = useState<RecentSearch[]>([]);
 
   const [query, setQuery] = useState("");
@@ -93,6 +98,7 @@ export default function SearchScreen() {
     setPhotoUri(uri);
     setState("searching");
     setError(null);
+    setErrorStatus(null);
     setFilters(DEFAULT_FILTERS);
     try {
       const data = await searchByPhoto(uri, mimeType);
@@ -104,6 +110,7 @@ export default function SearchScreen() {
       setRecent(await addRecent(uri, data.results.length));
     } catch (err) {
       setError((err as Error).message);
+      setErrorStatus(err instanceof ApiError ? (err.status ?? null) : null);
       setState("error");
     }
   }, []);
@@ -155,6 +162,7 @@ export default function SearchScreen() {
 
   const explainDenial = (what: "camera" | "photos") => {
     setError(`ChicFinder needs ${what} access to search. You can turn it on in Settings.`);
+    setErrorStatus(null);
     setState("error");
   };
 
@@ -187,6 +195,7 @@ export default function SearchScreen() {
     setPhotoUri(null);
     setResults([]);
     setError(null);
+    setErrorStatus(null);
     setFilters(DEFAULT_FILTERS);
   };
 
@@ -372,6 +381,14 @@ export default function SearchScreen() {
             )
           ) : state === "searching" ? (
             <LoadingState label="Matching your outfit" />
+          ) : state === "error" && errorStatus === 401 ? (
+            <SignInPrompt
+              align="top"
+              icon="camera-outline"
+              title="Sign in to search"
+              subtitle="Photo search needs an account on this build. Browsing stores stays open to everyone."
+              cta="Sign in to search"
+            />
           ) : state === "error" ? (
             <MessageState
               icon="alert-circle-outline"

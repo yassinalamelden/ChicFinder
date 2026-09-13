@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import recommend, health, stores, search, saved, account
+from api.routes import recommend, health, stores, search, saved, account, items
 from api.middleware.logging import LoggingMiddleware
 from chic_finder.config import settings
 

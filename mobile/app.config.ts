@@ -10,6 +10,33 @@ import type { ExpoConfig, ConfigContext } from "expo/config";
 
 const BUNDLE_ID = "app.chicfinder.mobile";
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
+
+/**
+ * The hostname of the API, but only when it is served over plain HTTP.
+ *
+ * iOS App Transport Security refuses cleartext connections, so a build pointed
+ * at `http://…` cannot reach its own backend without an explicit exception.
+ * The ChicFinder API currently runs on an ALB with no TLS listener, because a
+ * certificate needs a domain nobody has registered yet.
+ *
+ * Deriving the exception from the URL rather than hardcoding it means the
+ * exception disappears by itself the moment the API moves to https, instead of
+ * lingering in the Info.plist until someone remembers to delete it. That
+ * matters: Apple reviews ATS exceptions and rejects ones without justification,
+ * so shipping a build that still carries this is a submission risk.
+ */
+function cleartextHost(url: string): string | null {
+  if (!url.startsWith("http://")) return null;
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+}
+
+const INSECURE_HOST = cleartextHost(API_URL);
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "ChicFinder",
@@ -40,6 +67,22 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "ChicFinder uses your camera so you can photograph an outfit and find similar items from Egyptian brands.",
       NSPhotoLibraryUsageDescription:
         "ChicFinder needs access to your photos so you can choose an outfit picture to search with.",
+
+      // TEMPORARY, and scoped to exactly one host. Remove by giving the API a
+      // domain and an HTTPS listener, at which point this block stops being
+      // generated on its own. Never widen this to NSAllowsArbitraryLoads.
+      ...(INSECURE_HOST
+        ? {
+            NSAppTransportSecurity: {
+              NSExceptionDomains: {
+                [INSECURE_HOST]: {
+                  NSExceptionAllowsInsecureHTTPLoads: true,
+                  NSIncludesSubdomains: false,
+                },
+              },
+            },
+          }
+        : {}),
     },
     // Sign in with Apple. Required by Guideline 4.8 because the app also offers
     // Google sign-in.
@@ -97,7 +140,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
 
   extra: {
-    apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000",
+    apiUrl: API_URL,
     privacyPolicyUrl:
       process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ??
       "https://chicfinder.app/privacy",
