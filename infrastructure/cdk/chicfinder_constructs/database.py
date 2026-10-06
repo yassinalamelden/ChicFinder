@@ -23,7 +23,17 @@ class Database(Construct):
             credentials=rds.Credentials.from_generated_secret("chicfinder_admin"),
             allocated_storage=20,
             storage_encrypted=True,
-            removal_policy=RemovalPolicy.RETAIN,
+            # TEARDOWN: was RETAIN, which left the instance billing as an orphan
+            # after `cdk destroy` removed the stack that managed it. SNAPSHOT
+            # deletes the instance but takes a final snapshot on the way out, so
+            # the catalog is recoverable (`aws rds restore-db-instance-from-db-snapshot`)
+            # without paying for a running instance. Snapshot storage is a few
+            # euros a month at 20GB — delete the snapshot for true zero cost.
+            removal_policy=RemovalPolicy.SNAPSHOT,
+            # CDK defaults deletion_protection to True whenever the removal
+            # policy is RETAIN. Set it explicitly so the delete is not blocked.
+            deletion_protection=False,
+            delete_automated_backups=True,
         )
         self.secret = self.instance.secret
         self.connections = self.instance.connections

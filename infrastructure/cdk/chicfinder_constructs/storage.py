@@ -17,6 +17,15 @@ class Storage(Construct):
                 block_public_policy=False,
                 restrict_public_buckets=False,
             ),
-            removal_policy=RemovalPolicy.RETAIN,
+            # TEARDOWN: was RETAIN. DESTROY + auto_delete_objects so the bucket
+            # actually goes away — CloudFormation refuses to delete a non-empty
+            # bucket, and RETAIN left it billing after the stack was gone.
+            #
+            # WARNING: these product images are NOT in git and are not covered
+            # by the RDS snapshot. Mirror them locally before destroying:
+            #     aws s3 sync s3://<CatalogBucketName> ./backup/catalog-images
+            # See docs/aws-teardown.md, step 1.
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
         )
         self.bucket.grant_public_access()

@@ -1,20 +1,28 @@
 name: Deploy API
 
+# The AWS stack has been torn down deliberately (see docs/aws-teardown.md).
+# The automatic push trigger is disabled so that merging backend changes to
+# main does not silently re-provision the whole stack — VPC, NAT gateway, ALB,
+# RDS and two Fargate tasks, ~EUR 135/month — without anyone asking for it.
+#
+# Deploys are manual-only for now: run this workflow from the Actions tab
+# ("Run workflow"). To restore continuous deployment, uncomment the push block
+# below.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'api/**'
-      - 'ai_engine/**'
-      - 'chic_finder/**'
-      - 'shared/**'
-      - 'scripts/**'
-      - 'requirements.txt'
-      - 'requirements.lock'
-      - 'infrastructure/docker/Dockerfile.api'
-      - 'infrastructure/cdk/**'
-      - '.github/workflows/deploy-api.yml'
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'api/**'
+  #     - 'ai_engine/**'
+  #     - 'chic_finder/**'
+  #     - 'shared/**'
+  #     - 'scripts/**'
+  #     - 'requirements.txt'
+  #     - 'requirements.lock'
+  #     - 'infrastructure/docker/Dockerfile.api'
+  #     - 'infrastructure/cdk/**'
+  #     - '.github/workflows/deploy-api.yml'
 
 jobs:
   deploy:

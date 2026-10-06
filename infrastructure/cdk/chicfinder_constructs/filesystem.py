@@ -14,7 +14,12 @@ class Filesystem(Construct):
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
             encrypted=True,
-            removal_policy=RemovalPolicy.RETAIN,
+            # TEARDOWN: was RETAIN. The FAISS index here is a build artifact —
+            # regenerable from the catalog images via
+            # ai_engine/embeddings/database_builder.py — so it is not worth
+            # preserving, and RETAIN only left the volume billing after the
+            # stack was gone.
+            removal_policy=RemovalPolicy.DESTROY,
         )
 
         self.access_point = self.file_system.add_access_point(
