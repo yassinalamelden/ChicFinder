@@ -1,0 +1,219 @@
+name: Teardown AWS
+
+# Full teardown of ChicFinderStack, in the correct order, with the catalog
+# backed up first. See docs/aws-teardown.md.
+#
+# This exists because deletion policies are read from the DEPLOYED template,
+# not from the repo. Destroying without first deploying the RETAIN -> SNAPSHOT
+# / DESTROY change leaves RDS, EFS and S3 behind as orphans that keep billing.
+# This workflow deploys the policy change and then destroys, so that ordering
+# cannot be got wrong by hand.
+#
+# Manual dispatch only, and it refuses to run unless `confirm` is the exact
+# string DESTROY.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DESTROY to confirm permanent deletion of the AWS stack'
+        required: true
+        type: string
+      skip_image_backup:
+        description: 'Skip the S3 image backup (only if you already have a copy)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  AWS_REGION: eu-central-1
+  STACK_NAME: ChicFinderStack
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Refuse unless explicitly confirmed
+        if: inputs.confirm != 'DESTROY'
+        run: |
+          echo "::error::Confirmation string was not 'DESTROY' — refusing to touch the stack."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Confirm the stack exists and record its outputs
+        id: stack
+        run: |
+          set -euo pipefail
+          aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].StackStatus' --output text
+
+          BUCKET=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='CatalogBucketName'].OutputValue" \
+            --output text)
+          DB=$(aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" \
+            --query "StackResources[?ResourceType=='AWS::RDS::DBInstance'].PhysicalResourceId" \
+            --output text)
+
+          echo "bucket=$BUCKET" >> "$GITHUB_OUTPUT"
+          echo "db=$DB"         >> "$GITHUB_OUTPUT"
+          echo "Catalog bucket: $BUCKET"
+          echo "RDS instance:   $DB"
+
+          aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].Outputs' --output table > stack-outputs.txt
+          cat stack-outputs.txt
+
+      # ---------------------------------------------------------------------
+      # 1. Catalog images. These are in neither git nor the RDS snapshot, so
+      #    this is the only copy once the bucket is gone.
+      # ---------------------------------------------------------------------
+      - name: Back up the catalog images from S3
+        if: ${{ !inputs.skip_image_backup }}
+        run: |
+          set -euo pipefail
+          BUCKET='${{ steps.stack.outputs.bucket }}'
+          aws s3 ls "s3://$BUCKET" --recursive --summarize | tail -3
+          mkdir -p catalog-images
+          aws s3 sync "s3://$BUCKET" ./catalog-images --only-show-errors
+          echo "Objects downloaded: $(find ./catalog-images -type f | wc -l)"
+          du -sh ./catalog-images
+          tar -czf catalog-images.tar.gz catalog-images
+          ls -lh catalog-images.tar.gz
+
+      - name: Upload the image backup as an artifact
+        if: ${{ !inputs.skip_image_backup }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: chicfinder-catalog-images
+          path: catalog-images.tar.gz
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Upload the stack outputs for reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: chicfinder-stack-outputs
+          path: stack-outputs.txt
+          retention-days: 90
+          if-no-files-found: warn
+
+      # ---------------------------------------------------------------------
+      # 2. Named RDS snapshot, in addition to the automatic final one the
+      #    SNAPSHOT removal policy takes. Easier to find and verify.
+      # ---------------------------------------------------------------------
+      - name: Take a named RDS snapshot and wait for it
+        id: snapshot
+        run: |
+          set -euo pipefail
+          DB='${{ steps.stack.outputs.db }}'
+          SNAP="chicfinder-pre-teardown-$(date -u +%Y%m%d-%H%M%S)"
+          aws rds create-db-snapshot \
+            --db-instance-identifier "$DB" \
+            --db-snapshot-identifier "$SNAP" \
+            --query 'DBSnapshot.DBSnapshotIdentifier' --output text
+          echo "Waiting for snapshot $SNAP to become available (can take ~10 min)..."
+          aws rds wait db-snapshot-available --db-snapshot-identifier "$SNAP"
+          aws rds describe-db-snapshots --db-snapshot-identifier "$SNAP" \
+            --query 'DBSnapshots[0].{Id:DBSnapshotIdentifier,Status:Status,GB:AllocatedStorage}' \
+            --output table
+          echo "snapshot=$SNAP" >> "$GITHUB_OUTPUT"
+
+      # ---------------------------------------------------------------------
+      # 3. Deploy the deletion-policy change. REQUIRED before destroying:
+      #    CloudFormation reads policies from the deployed template.
+      # ---------------------------------------------------------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install CDK app dependencies
+        working-directory: infrastructure/cdk
+        run: pip install -r requirements.txt
+
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+
+      - name: Deploy the deletion-policy change
+        working-directory: infrastructure/cdk
+        run: cdk deploy --require-approval never
+
+      - name: Verify the deployed policies before destroying
+        run: |
+          set -euo pipefail
+          TPL=$(aws cloudformation get-template --stack-name "$STACK_NAME" \
+            --query 'TemplateBody' --output json)
+          echo "$TPL" > deployed.json
+          python - <<'PY'
+          import json, sys
+          t = json.load(open('deployed.json'))
+          res = t['Resources'] if isinstance(t, dict) and 'Resources' in t else {}
+          want = {
+              'AWS::RDS::DBInstance': 'Snapshot',
+              'AWS::EFS::FileSystem': 'Delete',
+              'AWS::S3::Bucket': 'Delete',
+          }
+          bad = []
+          seen = {}
+          for lid, r in res.items():
+              ty = r.get('Type')
+              if ty in want:
+                  pol = r.get('DeletionPolicy', '(default=Delete)')
+                  seen[ty] = pol
+                  if want[ty] not in str(pol):
+                      bad.append(f'{ty} ({lid}) has DeletionPolicy={pol}, expected {want[ty]}')
+          for ty, pol in seen.items():
+              print(f'{ty:26} DeletionPolicy={pol}')
+          # An empty or unexpected template must not read as a pass — otherwise
+          # this gate silently approves a destroy it never actually checked.
+          missing = set(want) - set(seen)
+          if missing:
+              print(f'\nRefusing to destroy — did not find {sorted(missing)} in the '
+                    f'deployed template ({len(res)} resources parsed). Cannot confirm '
+                    f'they will be deleted rather than orphaned.')
+              sys.exit(1)
+          if bad:
+              print('\nRefusing to destroy — these would be orphaned and keep billing:')
+              for b in bad:
+                  print('  ' + b)
+              sys.exit(1)
+          print('\nDeployed policies are correct; safe to destroy.')
+          PY
+
+      # ---------------------------------------------------------------------
+      # 4. Destroy.
+      # ---------------------------------------------------------------------
+      - name: Destroy the stack
+        working-directory: infrastructure/cdk
+        run: cdk destroy --force
+
+      - name: Report what is left
+        if: always()
+        run: |
+          set +e
+          echo "### Teardown result" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].StackStatus' --output text 2>&1)
+          if echo "$STATUS" | grep -q 'does not exist'; then
+            echo "- Stack \`$STACK_NAME\`: **deleted**" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Stack \`$STACK_NAME\`: still present, status \`$STATUS\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "- Snapshot kept: \`${{ steps.snapshot.outputs.snapshot }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Still billing, NOT owned by this stack (see docs/aws-teardown.md step 6):" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Secrets Manager secret \`chicfinder/app-secrets\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- CDK bootstrap ECR repo and assets bucket" >> "$GITHUB_STEP_SUMMARY"
+          echo "- The RDS snapshots (deliberate; delete for true zero cost)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Any \`/ecs/*\` CloudWatch log groups" >> "$GITHUB_STEP_SUMMARY"
